@@ -5,7 +5,396 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>AttendTrack</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<style>
+:root {
+  --bg:        #080b10;
+  --bg2:       #0e1218;
+  --surface:   #131820;
+  --surface2:  #1a2030;
+  --surface3:  #212840;
+  --border:    #1e2535;
+  --border2:   #2a3450;
+  --green:     #10d98a;
+  --green-dim: rgba(16,217,138,0.08);
+  --red:       #f05a5a;
+  --red-dim:   rgba(240,90,90,0.08);
+  --yellow:    #f5c842;
+  --yellow-dim:rgba(245,200,66,0.08);
+  --purple:    #9d7ff5;
+  --purple-dim:rgba(157,127,245,0.08);
+  --pink:      #e879a0;
+  --pink-dim:  rgba(232,121,160,0.08);
+  --blue:      #4fa3f7;
+  --blue-dim:  rgba(79,163,247,0.08);
+  --text:      #dce4f0;
+  --text2:     #8a95a8;
+  --text3:     #4a5568;
+  --mono:      'JetBrains Mono', monospace;
+  --sans:      'Inter', sans-serif;
+  --radius:    12px;
+  --radius-sm: 8px;
+  --shadow:    0 4px 24px rgba(0,0,0,0.4);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  font-size: 14px;
+}
+
+/* Subtle grid background */
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background-image:
+    linear-gradient(rgba(30,37,53,0.4) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30,37,53,0.4) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events:none; z-index:0;
+}
+body::after {
+  content:'';
+  position:fixed;
+  top:-20%; left:-20%; width:60%; height:60%;
+  background: radial-gradient(ellipse, rgba(16,217,138,0.03) 0%, transparent 70%);
+  pointer-events:none; z-index:0;
+}
+
+.wrap { max-width:1280px; margin:0 auto; padding:1.5rem; position:relative; z-index:1; }
+
+/* ── HEADER ── */
+.header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:1.75rem; padding-bottom:1.25rem;
+  border-bottom:1px solid var(--border);
+}
+.logo { display:flex; align-items:center; gap:0.75rem; }
+.logo-icon {
+  width:38px; height:38px; border-radius:10px;
+  background:linear-gradient(135deg, var(--green), #0ba36a);
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.1rem; box-shadow:0 0 20px rgba(16,217,138,0.3);
+  flex-shrink:0;
+}
+.logo-text h1 { font-size:1.3rem; font-weight:700; letter-spacing:-0.5px; }
+.logo-text h1 span { color:var(--green); }
+.logo-text p { font-size:0.65rem; color:var(--text2); letter-spacing:1.5px; text-transform:uppercase; font-family:var(--mono); }
+.header-right { text-align:right; font-family:var(--mono); font-size:0.7rem; color:var(--text2); }
+.header-right .date { color:var(--text); font-weight:500; }
+.header-right .tag { color:var(--green); margin-top:2px; }
+
+/* ── CARDS GRID ── */
+.top-grid {
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:1rem;
+  margin-bottom:1.25rem;
+}
+
+.card {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:1.25rem;
+  position:relative;
+  overflow:hidden;
+}
+.card::before {
+  content:'';
+  position:absolute; top:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg, var(--green), transparent);
+  opacity:0.4;
+}
+.card-title {
+  font-size:0.6rem; font-family:var(--mono); text-transform:uppercase;
+  letter-spacing:2px; color:var(--text2); margin-bottom:1rem;
+  display:flex; align-items:center; gap:0.4rem;
+}
+.card-title .dot {
+  width:5px; height:5px; border-radius:50%; background:var(--green); flex-shrink:0;
+}
+
+/* ── INPUTS ── */
+input, select, textarea {
+  background:var(--surface2);
+  border:1px solid var(--border);
+  color:var(--text);
+  border-radius:var(--radius-sm);
+  padding:0.55rem 0.8rem;
+  font-family:var(--mono);
+  font-size:0.8rem;
+  outline:none;
+  transition:border-color 0.2s, background 0.2s;
+  width:100%;
+  -webkit-appearance:none;
+}
+input:focus, select:focus { border-color:var(--green); background:var(--surface3); }
+input::placeholder { color:var(--text3); }
+select option { background:var(--surface2); }
+
+.input-row { display:flex; gap:0.5rem; align-items:center; }
+.input-row input, .input-row select { flex:1; }
+
+label.field-label {
+  display:block;
+  font-size:0.6rem; font-family:var(--mono); text-transform:uppercase;
+  letter-spacing:1.5px; color:var(--text2); margin-bottom:0.3rem;
+}
+
+/* ── BUTTONS ── */
+.btn {
+  padding:0.55rem 1rem; border-radius:var(--radius-sm); border:none;
+  font-family:var(--sans); font-weight:600; font-size:0.78rem;
+  cursor:pointer; transition:all 0.18s; letter-spacing:0.3px;
+  white-space:nowrap; display:inline-flex; align-items:center; gap:0.35rem;
+}
+.btn-green  { background:var(--green); color:#000; }
+.btn-green:hover  { background:#13f09a; transform:translateY(-1px); box-shadow:0 4px 12px rgba(16,217,138,0.3); }
+.btn-ghost  { background:transparent; border:1px solid var(--border2); color:var(--text2); }
+.btn-ghost:hover  { border-color:var(--green); color:var(--green); background:var(--green-dim); }
+.btn-yellow { background:var(--yellow); color:#000; }
+.btn-yellow:hover { background:#ffd94d; }
+.btn-red    { background:transparent; border:1px solid rgba(240,90,90,0.3); color:var(--red); }
+.btn-red:hover    { background:var(--red-dim); border-color:var(--red); }
+
+/* ── MONTH SELECTOR ── */
+.month-row { display:flex; gap:0.5rem; align-items:center; }
+.month-row select { flex:1; }
+
+/* ── HOLIDAY TAGS ── */
+.tags-wrap { display:flex; flex-wrap:wrap; gap:0.35rem; margin-top:0.75rem; min-height:24px; }
+.h-tag {
+  background:var(--yellow-dim); border:1px solid rgba(245,200,66,0.25);
+  color:var(--yellow); padding:0.2rem 0.55rem; border-radius:20px;
+  font-size:0.65rem; font-family:var(--mono);
+  display:flex; align-items:center; gap:0.3rem; cursor:pointer;
+  transition:all 0.15s;
+}
+.h-tag:hover { background:var(--red-dim); border-color:rgba(240,90,90,0.3); color:var(--red); }
+.h-tag-none { font-size:0.65rem; font-family:var(--mono); color:var(--text3); }
+
+/* ── SALARY CARD ── */
+.salary-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.6rem; margin-top:0.75rem; }
+.sal-box {
+  background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm);
+  padding:0.65rem 0.75rem;
+}
+.sal-box-label { font-size:0.55rem; font-family:var(--mono); text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); margin-bottom:0.25rem; }
+.sal-box-val { font-family:var(--mono); font-size:0.85rem; font-weight:700; }
+.sal-green  { color:var(--green); }
+.sal-yellow { color:var(--yellow); }
+.sal-red    { color:var(--red); }
+.sal-pink   { color:var(--pink); font-size:1rem; }
+.sal-formula { font-family:var(--mono); font-size:0.6rem; color:var(--text3); margin-top:0.65rem; line-height:1.7; }
+
+/* ── STATS STRIP ── */
+.stats-strip {
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:0.75rem;
+  margin-bottom:1.25rem;
+}
+.stat {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:1rem 0.75rem;
+  text-align:center; position:relative; overflow:hidden;
+  transition:transform 0.15s, border-color 0.15s;
+}
+.stat:hover { transform:translateY(-2px); }
+.stat::after {
+  content:''; position:absolute; bottom:0; left:0; right:0; height:2px;
+}
+.stat.s-green::after  { background:var(--green); }
+.stat.s-red::after    { background:var(--red); }
+.stat.s-yellow::after { background:var(--yellow); }
+.stat.s-purple::after { background:var(--purple); }
+.stat.s-pink::after   { background:var(--pink); }
+.stat.s-blue::after   { background:var(--blue); }
+.stat-num {
+  font-family:var(--mono); font-size:1.6rem; font-weight:700; line-height:1;
+  margin-bottom:0.3rem;
+}
+.stat.s-green  .stat-num { color:var(--green); }
+.stat.s-red    .stat-num { color:var(--red); }
+.stat.s-yellow .stat-num { color:var(--yellow); }
+.stat.s-purple .stat-num { color:var(--purple); }
+.stat.s-pink   .stat-num { color:var(--pink); }
+.stat.s-blue   .stat-num { color:var(--blue); }
+.stat-lbl { font-size:0.55rem; font-family:var(--mono); text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); }
+
+/* ── QUICK ADD FORM ── */
+.quick-form {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:1.25rem; margin-bottom:1.25rem;
+}
+.qf-grid {
+  display:grid;
+  grid-template-columns:1.5fr 1fr 1fr 1.5fr auto auto;
+  gap:0.6rem; align-items:flex-end;
+}
+.tip-bar {
+  margin-top:0.75rem; padding:0.5rem 0.75rem;
+  background:var(--surface2); border-radius:var(--radius-sm);
+  border-left:2px solid var(--green);
+  font-size:0.65rem; font-family:var(--mono); color:var(--text2);
+}
+.tip-bar b { color:var(--green); font-weight:500; }
+
+/* ── TABLE ── */
+.table-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); overflow:hidden;
+}
+.table-top {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:1rem 1.25rem; border-bottom:1px solid var(--border);
+  gap:0.5rem; flex-wrap:wrap;
+}
+.table-top-title {
+  font-size:0.65rem; font-family:var(--mono); text-transform:uppercase;
+  letter-spacing:2px; color:var(--text2);
+}
+.table-top-btns { display:flex; gap:0.5rem; flex-wrap:wrap; }
+
+.tbl-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+table { width:100%; border-collapse:collapse; min-width:780px; }
+thead th {
+  padding:0.65rem 0.85rem; text-align:left;
+  font-size:0.58rem; font-family:var(--mono); text-transform:uppercase;
+  letter-spacing:1.5px; color:var(--text3); background:var(--surface2);
+  border-bottom:1px solid var(--border); white-space:nowrap;
+}
+tbody tr { border-bottom:1px solid rgba(30,37,53,0.8); transition:background 0.1s; }
+tbody tr:last-child { border-bottom:none; }
+tbody tr:hover { background:rgba(26,32,48,0.6); }
+tbody td { padding:0.6rem 0.85rem; font-family:var(--mono); font-size:0.78rem; }
+
+/* Badges */
+.badge {
+  display:inline-flex; align-items:center; gap:0.3rem;
+  padding:0.2rem 0.55rem; border-radius:20px;
+  font-size:0.6rem; font-family:var(--mono); font-weight:600;
+  text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap;
+}
+.b-present { background:var(--green-dim); color:var(--green); border:1px solid rgba(16,217,138,0.2); }
+.b-absent  { background:var(--red-dim);   color:var(--red);   border:1px solid rgba(240,90,90,0.2); }
+.b-sunday  { background:var(--purple-dim);color:var(--purple);border:1px solid rgba(157,127,245,0.2); }
+.b-holiday { background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,200,66,0.2); }
+.b-pl      { background:var(--pink-dim);  color:var(--pink);  border:1px solid rgba(232,121,160,0.2); }
+
+.dur { color:var(--green); font-weight:700; }
+.ot  { color:var(--yellow); }
+.short { color:var(--red); }
+
+/* Inline editable */
+.e-time {
+  background:transparent; border:1px solid transparent;
+  color:var(--text); border-radius:6px; padding:0.2rem 0.35rem;
+  font-family:var(--mono); font-size:0.78rem; width:88px;
+  cursor:pointer; transition:all 0.15s;
+}
+.e-time:hover  { border-color:var(--border2); background:var(--surface2); }
+.e-time:focus  { border-color:var(--green); background:var(--surface2); outline:none; }
+
+.e-note {
+  background:transparent; border:1px solid transparent;
+  color:var(--text2); border-radius:6px; padding:0.2rem 0.35rem;
+  font-family:var(--mono); font-size:0.72rem; width:110px;
+  cursor:pointer; transition:all 0.15s;
+}
+.e-note:hover  { border-color:var(--border2); background:var(--surface2); }
+.e-note:focus  { border-color:var(--green); background:var(--surface2); outline:none; color:var(--text); }
+
+/* PL Toggle */
+.pl-btn {
+  background:transparent; border:1px solid rgba(232,121,160,0.25);
+  color:var(--pink); border-radius:6px; padding:0.2rem 0.5rem;
+  font-size:0.62rem; font-family:var(--mono); cursor:pointer;
+  transition:all 0.15s; white-space:nowrap;
+}
+.pl-btn:hover { background:var(--pink-dim); border-color:var(--pink); }
+.pl-btn.on    { background:var(--pink-dim); border-color:var(--pink); font-weight:700; }
+.pl-btn.off   { opacity:0.3; cursor:not-allowed; border-color:var(--border); color:var(--text3); }
+
+/* Row action buttons */
+.row-btn {
+  background:transparent; border:1px solid var(--border);
+  color:var(--text3); border-radius:6px; padding:0.2rem 0.45rem;
+  cursor:pointer; font-size:0.72rem; transition:all 0.15s;
+}
+.row-btn:hover       { border-color:var(--red); color:var(--red); background:var(--red-dim); }
+.row-btn.add:hover   { border-color:var(--green); color:var(--green); background:var(--green-dim); }
+
+/* ── TOAST ── */
+.toast {
+  position:fixed; bottom:1.5rem; right:1.5rem; left:auto;
+  background:var(--surface2); border:1px solid var(--green);
+  color:var(--green); padding:0.65rem 1.1rem; border-radius:var(--radius-sm);
+  font-family:var(--mono); font-size:0.75rem;
+  transform:translateY(80px); opacity:0; transition:all 0.25s;
+  z-index:999; max-width:calc(100vw - 3rem);
+  box-shadow:0 8px 24px rgba(0,0,0,0.5);
+}
+.toast.show     { transform:translateY(0); opacity:1; }
+.toast.err      { border-color:var(--red); color:var(--red); }
+
+/* ── MOBILE CARD VIEW (replaces table on small screens) ── */
+.day-cards { display:none; }
+.day-card {
+  background:var(--surface2); border:1px solid var(--border);
+  border-radius:var(--radius-sm); padding:0.9rem; margin-bottom:0.5rem;
+}
+.day-card-top {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:0.6rem;
+}
+.day-card-date { font-family:var(--mono); font-size:0.72rem; color:var(--text2); }
+.day-card-day  { font-family:var(--mono); font-size:0.65rem; color:var(--text3); }
+.day-card-body { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-top:0.6rem; }
+.day-card-field label { font-size:0.55rem; text-transform:uppercase; letter-spacing:1px; color:var(--text3); font-family:var(--mono); display:block; margin-bottom:0.2rem; }
+.day-card-field input { font-size:0.75rem; padding:0.4rem 0.6rem; }
+.day-card-actions { display:flex; gap:0.4rem; margin-top:0.6rem; flex-wrap:wrap; align-items:center; }
+
+/* ── RESPONSIVE ── */
+@media (max-width:1100px) {
+  .top-grid { grid-template-columns:1fr 1fr; }
+  .stats-strip { grid-template-columns:repeat(3,1fr); }
+}
+
+@media (max-width:900px) {
+  .qf-grid { grid-template-columns:1fr 1fr; }
+  .qf-grid .btn { width:100%; justify-content:center; }
+}
+
+@media (max-width:720px) {
+  .wrap { padding:1rem 0.75rem; }
+  .top-grid { grid-template-columns:1fr; }
+  .stats-strip { grid-template-columns:repeat(3,1fr); gap:0.5rem; }
+  .stat { padding:0.75rem 0.5rem; }
+  .stat-num { font-size:1.3rem; }
+  .qf-grid { grid-template-columns:1fr 1fr; gap:0.5rem; }
+  .header-right { display:none; }
+
+  /* Hide desktop table, show card view on mobile */
+  .tbl-scroll { display:none; }
+  .day-cards  { display:block; }
+  .table-top  { padding:0.75rem 1rem; }
+}
+
+@media (max-width:480px) {
+  .stats-strip { grid-template-columns:repeat(2,1fr); }
+  .stat.s-blue { display:none; } /* hide total hrs on tiny screen, shown in salary card */
+  .qf-grid { grid-template-columns:1fr; }
+  .logo-text p { display:none; }
+  .salary-grid { grid-template-columns:1fr 1fr; }
+}
+</style>
 </head>
 <body>
 <div class="wrap">
@@ -143,6 +532,476 @@
 </div>
 <div class="toast" id="toast"></div>
 
-<script src="./script.js"></script>
+<script>
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const DAYS_SHORT=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const WORK_HOURS=9;
+const PAID_LEAVE_MINS=685; // 11h 25m
+
+let currentMonth, currentYear;
+let attendance={};
+let holidays={};
+let monthlySalary=0;
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+(function(){
+  const now=new Date();
+  currentMonth=now.getMonth(); currentYear=now.getFullYear();
+
+  document.getElementById('hdrDate').textContent=now.toDateString();
+
+  const ms=document.getElementById('monthSelect');
+  MONTHS.forEach((m,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=m; if(i===currentMonth)o.selected=true; ms.appendChild(o); });
+
+  const ys=document.getElementById('yearSelect');
+  for(let y=currentYear-10;y<=currentYear+5;y++){ const o=document.createElement('option'); o.value=y; o.textContent=y; if(y===currentYear)o.selected=true; ys.appendChild(o); }
+
+  document.getElementById('entryDate').value=fmt(now);
+  document.getElementById('checkIn').value='09:30';
+  document.getElementById('checkOut').value='18:30';
+
+  try{
+    const a=localStorage.getItem('att_v2'), h=localStorage.getItem('att_hol'), s=localStorage.getItem('att_salary');
+    if(a) attendance=JSON.parse(a);
+    if(h) holidays=JSON.parse(h);
+    if(s){ monthlySalary=parseFloat(s)||0; document.getElementById('salaryInput').value=monthlySalary||''; }
+  }catch(e){}
+
+  renderHolidayTags(); loadMonth();
+})();
+
+function persist(){
+  localStorage.setItem('att_v2',JSON.stringify(attendance));
+  localStorage.setItem('att_hol',JSON.stringify(holidays));
+  if(monthlySalary) localStorage.setItem('att_salary',monthlySalary);
+}
+
+// ── MONTH ────────────────────────────────────────────────────────────────────
+function loadMonth(){
+  currentMonth=+document.getElementById('monthSelect').value;
+  currentYear=+document.getElementById('yearSelect').value;
+  document.getElementById('tableTitle').textContent=`${MONTHS[currentMonth]} ${currentYear} — Log`;
+  renderTable(); updateStats(); updateSalary();
+}
+
+// ── HOLIDAYS ─────────────────────────────────────────────────────────────────
+function addHoliday(){
+  const d=document.getElementById('holidayDate').value;
+  const n=document.getElementById('holidayName').value.trim()||'Holiday';
+  if(!d){toast('Pick a date',true);return;}
+  holidays[d]=n; persist(); renderHolidayTags(); renderTable(); updateStats(); updateSalary();
+  toast(`🎉 "${n}" added`);
+  document.getElementById('holidayDate').value=''; document.getElementById('holidayName').value='';
+}
+function removeHoliday(d){ delete holidays[d]; persist(); renderHolidayTags(); renderTable(); updateStats(); updateSalary(); toast('Holiday removed'); }
+function renderHolidayTags(){
+  const c=document.getElementById('holidayTags'); c.innerHTML='';
+  const keys=Object.keys(holidays).sort();
+  if(!keys.length){ c.innerHTML='<span class="h-tag-none">No holidays added</span>'; return; }
+  keys.forEach(d=>{ const t=document.createElement('div'); t.className='h-tag'; t.title='Tap to remove'; t.innerHTML=`${d} — ${holidays[d]} ✕`; t.onclick=()=>removeHoliday(d); c.appendChild(t); });
+}
+
+// ── QUICK ADD ────────────────────────────────────────────────────────────────
+function saveEntry(){
+  const d=document.getElementById('entryDate').value;
+  const ci=document.getElementById('checkIn').value;
+  const co=document.getElementById('checkOut').value;
+  const note=document.getElementById('entryNote').value.trim();
+  if(!d){toast('Select a date',true);return;}
+  attendance[d]={checkIn:ci,checkOut:co,note};
+  persist(); renderTable(); updateStats(); updateSalary(); toast('✓ Entry saved!'); clearForm();
+}
+function clearForm(){
+  document.getElementById('checkIn').value='09:30';
+  document.getElementById('checkOut').value='18:30';
+  document.getElementById('entryNote').value='';
+}
+
+// ── INLINE EDIT ──────────────────────────────────────────────────────────────
+function ic(date,field,value){
+  if(!attendance[date]) attendance[date]={checkIn:'',checkOut:'',note:''};
+  attendance[date][field]=value;
+  const e=attendance[date];
+  if(!e.checkIn&&!e.checkOut&&!e.note&&!e.paidLeave) delete attendance[date];
+  persist(); refreshRow(date); updateStats(); updateSalary();
+}
+
+function refreshRow(date){
+  // Refresh desktop row
+  const row=document.querySelector(`tr[data-d="${date}"]`);
+  if(row){
+    const e=attendance[date]; const dow=new Date(date).getDay();
+    const sc=row.querySelector('.sc');
+    if(sc){
+      if(dow===0) sc.innerHTML=`<span class="badge b-sunday">☀ Sun</span>`;
+      else if(holidays[date]) sc.innerHTML=`<span class="badge b-holiday">🎉 ${holidays[date]}</span>`;
+      else if(e?.paidLeave) sc.innerHTML=`<span class="badge b-pl">🌴 PL</span>`;
+      else if(e&&(e.checkIn||e.checkOut)) sc.innerHTML=`<span class="badge b-present">✓ Present</span>`;
+      else sc.innerHTML=`<span class="badge b-absent">✗ Absent</span>`;
+    }
+    const hc=row.querySelector('.hc'), oc=row.querySelector('.oc'), bc=row.querySelector('.bc');
+    let hoursHTML=`<span style="color:var(--text3)">—</span>`, otHTML=`<span style="color:var(--text3)">—</span>`;
+    if(e&&e.checkIn&&e.checkOut){
+      const mins=tdm(e.checkIn,e.checkOut);
+      if(mins>0){
+        hoursHTML=`<span class="dur">${hl(mins)}</span>`;
+        const diff=(mins/60)-WORK_HOURS;
+        if(diff>0.01) otHTML=`<span class="ot">+${diff.toFixed(1)}h</span>`;
+        else if(diff<-0.01) otHTML=`<span class="short">${diff.toFixed(1)}h</span>`;
+        else otHTML=`<span style="color:var(--text3)">✓</span>`;
+      } else hoursHTML=`<span style="color:var(--red)">⚠</span>`;
+    }
+    if(hc) hc.innerHTML=hoursHTML;
+    if(oc) oc.innerHTML=otHTML;
+    if(bc){
+      const hasData=e&&(e.checkIn||e.checkOut||e.note||e.paidLeave);
+      bc.innerHTML=hasData?`<button class="row-btn" onclick="delEntry('${date}')" title="Clear">✕</button>`
+        :`<button class="row-btn add" onclick="qfill('${date}')" title="Quick fill">＋</button>`;
+    }
+  }
+  // Also re-render mobile card for this date
+  const mcard=document.querySelector(`.day-card[data-d="${date}"]`);
+  if(mcard) updateMobileCard(date,mcard);
+}
+
+function delEntry(d){ delete attendance[d]; persist(); renderTable(); updateStats(); updateSalary(); toast('Entry cleared'); }
+
+function togglePL(date){
+  const days=new Date(currentYear,currentMonth+1,0).getDate();
+  let plUsed=0;
+  for(let day=1;day<=days;day++){ const d=`${currentYear}-${pad(currentMonth+1)}-${pad(day)}`; if(attendance[d]?.paidLeave) plUsed++; }
+  const alreadyPL=!!attendance[date]?.paidLeave;
+  if(!alreadyPL&&plUsed>=1){ toast('⚠ PL limit reached (1 day/month)',true); return; }
+  if(!attendance[date]) attendance[date]={checkIn:'',checkOut:'',note:'',paidLeave:false};
+  attendance[date].paidLeave=!attendance[date].paidLeave;
+  const e=attendance[date];
+  if(!e.checkIn&&!e.checkOut&&!e.note&&!e.paidLeave) delete attendance[date];
+  persist(); renderTable(); updateStats(); updateSalary();
+  toast(attendance[date]?.paidLeave?'🌴 Paid leave ON':'Paid leave removed');
+}
+
+function qfill(date){ attendance[date]={checkIn:'09:30',checkOut:'18:30',note:''}; persist(); renderTable(); updateStats(); updateSalary(); toast('Filled 9:30–18:30'); }
+
+// ── RENDER TABLE (Desktop) ───────────────────────────────────────────────────
+function renderTable(){
+  const tbody=document.getElementById('tableBody');
+  const mobileWrap=document.getElementById('dayCards');
+  tbody.innerHTML=''; mobileWrap.innerHTML='';
+
+  const days=new Date(currentYear,currentMonth+1,0).getDate();
+  let plUsed=0;
+  for(let day=1;day<=days;day++){ const d=`${currentYear}-${pad(currentMonth+1)}-${pad(day)}`; if(attendance[d]?.paidLeave) plUsed++; }
+  const PL_LIMIT=1;
+
+  for(let day=1;day<=days;day++){
+    const date=`${currentYear}-${pad(currentMonth+1)}-${pad(day)}`;
+    const dow=new Date(date).getDay();
+    const isSun=dow===0, isSat=dow===6, isHol=!!holidays[date];
+    const e=attendance[date];
+
+    let badge;
+    if(isSun)                              badge=`<span class="badge b-sunday">☀ Sun</span>`;
+    else if(isHol)                         badge=`<span class="badge b-holiday">🎉 ${holidays[date]}</span>`;
+    else if(e?.paidLeave)                  badge=`<span class="badge b-pl">🌴 PL</span>`;
+    else if(e&&(e.checkIn||e.checkOut))    badge=`<span class="badge b-present">✓ Present</span>`;
+    else                                   badge=`<span class="badge b-absent">✗ Absent</span>`;
+
+    let hoursHTML=`<span style="color:var(--text3)">—</span>`, otHTML=`<span style="color:var(--text3)">—</span>`;
+    if(e&&e.checkIn&&e.checkOut){
+      const mins=tdm(e.checkIn,e.checkOut);
+      if(mins>0){
+        hoursHTML=`<span class="dur">${hl(mins)}</span>`;
+        const diff=(mins/60)-WORK_HOURS;
+        if(diff>0.01) otHTML=`<span class="ot">+${diff.toFixed(1)}h</span>`;
+        else if(diff<-0.01) otHTML=`<span class="short">${diff.toFixed(1)}h</span>`;
+        else otHTML=`<span style="color:var(--text3)">✓</span>`;
+      } else hoursHTML=`<span style="color:var(--red)">⚠</span>`;
+    }
+
+    const isPL=!!(e?.paidLeave);
+    const plLimitReached=plUsed>=PL_LIMIT&&!isPL;
+    let plBtn;
+    if(isSun||isHol) plBtn=`<span style="color:var(--text3);font-size:0.65rem;">—</span>`;
+    else if(isPL) plBtn=`<button class="pl-btn on" onclick="togglePL('${date}')">🌴 ON</button>`;
+    else if(plLimitReached) plBtn=`<button class="pl-btn off" disabled>✗ Used</button>`;
+    else plBtn=`<button class="pl-btn" onclick="togglePL('${date}')">+ PL</button>`;
+
+    const hasData=e&&(e.checkIn||e.checkOut||e.note||e.paidLeave);
+    const ciVal=e?.checkIn??'', coVal=e?.checkOut??'', noteVal=(e?.note??'').replace(/"/g,'&quot;');
+
+    // Desktop row
+    const tr=document.createElement('tr');
+    tr.dataset.d=date;
+    if(isSun) tr.style.opacity='0.5';
+    if(isHol) tr.style.background='rgba(245,200,66,0.02)';
+    if(isPL&&!isSun&&!isHol) tr.style.background='rgba(232,121,160,0.03)';
+
+    const dayColor=isSun?'var(--purple)':isSat?'var(--yellow)':'var(--text3)';
+    tr.innerHTML=`
+      <td style="color:var(--text2);white-space:nowrap">${date}</td>
+      <td><span style="color:${dayColor}">${DAYS_SHORT[dow]}</span></td>
+      <td class="sc">${badge}</td>
+      <td><input class="e-time" type="time" value="${ciVal}" onchange="ic('${date}','checkIn',this.value)"></td>
+      <td><input class="e-time" type="time" value="${coVal}" onchange="ic('${date}','checkOut',this.value)"></td>
+      <td class="hc">${hoursHTML}</td>
+      <td class="oc">${otHTML}</td>
+      <td>${plBtn}</td>
+      <td><input class="e-note" type="text" value="${noteVal}" placeholder="note…" onchange="ic('${date}','note',this.value)"></td>
+      <td class="bc">${hasData?`<button class="row-btn" onclick="delEntry('${date}')">✕</button>`:`<button class="row-btn add" onclick="qfill('${date}')">＋</button>`}</td>
+    `;
+    tbody.appendChild(tr);
+
+    // Mobile card
+    const mc=document.createElement('div');
+    mc.className='day-card'; mc.dataset.d=date;
+    if(isSun) mc.style.opacity='0.5';
+    mobileWrap.appendChild(mc);
+    updateMobileCard(date,mc,{badge,hoursHTML,otHTML,plBtn,hasData,isPL,plLimitReached,isSun,isHol,isSat,dayColor});
+  }
+}
+
+function updateMobileCard(date,mc,info){
+  if(!info){
+    // Re-compute minimal info
+    const dow=new Date(date).getDay();
+    const isSun=dow===0,isSat=dow===6,isHol=!!holidays[date],e=attendance[date];
+    const isPL=!!(e?.paidLeave);
+    let badge;
+    if(isSun) badge=`<span class="badge b-sunday">☀ Sun</span>`;
+    else if(isHol) badge=`<span class="badge b-holiday">🎉 ${holidays[date]}</span>`;
+    else if(isPL) badge=`<span class="badge b-pl">🌴 PL</span>`;
+    else if(e&&(e.checkIn||e.checkOut)) badge=`<span class="badge b-present">✓ Present</span>`;
+    else badge=`<span class="badge b-absent">✗ Absent</span>`;
+    let hoursHTML=`<span style="color:var(--text3)">—</span>`,otHTML=`<span style="color:var(--text3)">—</span>`;
+    if(e&&e.checkIn&&e.checkOut){const mins=tdm(e.checkIn,e.checkOut);if(mins>0){hoursHTML=`<span class="dur">${hl(mins)}</span>`;const diff=(mins/60)-WORK_HOURS;if(diff>0.01)otHTML=`<span class="ot">+${diff.toFixed(1)}h</span>`;else if(diff<-0.01)otHTML=`<span class="short">${diff.toFixed(1)}h</span>`;else otHTML=`<span style="color:var(--text3)">✓</span>`;}else hoursHTML=`<span style="color:var(--red)">⚠</span>`;}
+    const days=new Date(currentYear,currentMonth+1,0).getDate();
+    let plUsed=0;for(let d2=1;d2<=days;d2++){const dd=`${currentYear}-${pad(currentMonth+1)}-${pad(d2)}`;if(attendance[dd]?.paidLeave)plUsed++;}
+    const plLimitReached=plUsed>=1&&!isPL;
+    let plBtn;
+    if(isSun||isHol) plBtn=`<span style="color:var(--text3);font-size:0.65rem;">—</span>`;
+    else if(isPL) plBtn=`<button class="pl-btn on" onclick="togglePL('${date}')">🌴 ON</button>`;
+    else if(plLimitReached) plBtn=`<button class="pl-btn off" disabled>✗ Used</button>`;
+    else plBtn=`<button class="pl-btn" onclick="togglePL('${date}')">+ PL</button>`;
+    const hasData=e&&(e.checkIn||e.checkOut||e.note||e.paidLeave);
+    const dayColor=isSun?'var(--purple)':isSat?'var(--yellow)':'var(--text3)';
+    info={badge,hoursHTML,otHTML,plBtn,hasData,isPL,plLimitReached,isSun,isHol,isSat,dayColor};
+  }
+  const e=attendance[date];
+  const ciVal=e?.checkIn??'', coVal=e?.checkOut??'', noteVal=(e?.note??'').replace(/"/g,'&quot;');
+  const dow=new Date(date).getDay();
+  mc.innerHTML=`
+    <div class="day-card-top">
+      <div>
+        <div class="day-card-date">${date} <span style="color:${info.dayColor};margin-left:4px;">${DAYS_SHORT[dow]}</span></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.4rem;">${info.badge}</div>
+    </div>
+    <div class="day-card-body">
+      <div class="day-card-field">
+        <label>Check In</label>
+        <input class="e-time" style="width:100%" type="time" value="${ciVal}" onchange="ic('${date}','checkIn',this.value)">
+      </div>
+      <div class="day-card-field">
+        <label>Check Out</label>
+        <input class="e-time" style="width:100%" type="time" value="${coVal}" onchange="ic('${date}','checkOut',this.value)">
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;flex-wrap:wrap;">
+      <span>${info.hoursHTML}</span>
+      <span>${info.otHTML}</span>
+    </div>
+    <div class="day-card-actions">
+      ${info.plBtn}
+      <input class="e-note" style="flex:1;min-width:100px;" type="text" value="${noteVal}" placeholder="add note…" onchange="ic('${date}','note',this.value)">
+      ${info.hasData?`<button class="row-btn" onclick="delEntry('${date}')">✕</button>`:`<button class="row-btn add" onclick="qfill('${date}')">＋</button>`}
+    </div>
+  `;
+}
+
+// ── STATS ────────────────────────────────────────────────────────────────────
+function updateStats(){
+  const days=new Date(currentYear,currentMonth+1,0).getDate();
+  let present=0,absent=0,hols=0,suns=0,plCount=0,totalMins=0;
+  for(let day=1;day<=days;day++){
+    const date=`${currentYear}-${pad(currentMonth+1)}-${pad(day)}`;
+    const dow=new Date(date).getDay();
+    if(dow===0){suns++;continue;}
+    if(holidays[date]){hols++;continue;}
+    const e=attendance[date];
+    if(e?.paidLeave){plCount++;totalMins+=PAID_LEAVE_MINS;}
+    if(e&&(e.checkIn||e.checkOut)){present++;if(e.checkIn&&e.checkOut){const m=tdm(e.checkIn,e.checkOut);if(m>0)totalMins+=m;}}
+    else if(!e?.paidLeave) absent++;
+  }
+  document.getElementById('statPresent').textContent=present;
+  document.getElementById('statAbsent').textContent=absent;
+  document.getElementById('statHoliday').textContent=hols;
+  document.getElementById('statSunday').textContent=suns;
+  document.getElementById('statPL').textContent=plCount;
+  const h=Math.floor(totalMins/60),m=totalMins%60;
+  document.getElementById('statTotalHrs').textContent=m?`${h}h${m}m`:`${h}h`;
+  updateSalary();
+}
+
+// ── SALARY ───────────────────────────────────────────────────────────────────
+function saveSalary(){ monthlySalary=parseFloat(document.getElementById('salaryInput').value)||0; localStorage.setItem('att_salary',monthlySalary); updateSalary(); }
+
+function updateSalary(){
+  const salary=monthlySalary||parseFloat(document.getElementById('salaryInput')?.value)||0;
+  const perDayEl=document.getElementById('perDaySalary'),earnedEl=document.getElementById('earnedSalary'),
+        deductionEl=document.getElementById('deductionSalary'),netEl=document.getElementById('netSalary'),
+        formulaEl=document.getElementById('salaryFormula');
+  const totalDaysInMonth=new Date(currentYear,currentMonth+1,0).getDate();
+  const MINS_PER_DAY=WORK_HOURS*60; // 540
+
+  if(!salary||salary<=0){
+    [perDayEl,earnedEl,deductionEl,netEl].forEach(el=>{if(el)el.textContent='₹ —';});
+    if(formulaEl)formulaEl.textContent='Enter salary above to see calculation';
+    return;
+  }
+
+  // Per day = salary ÷ total calendar days (incl. Sundays & holidays)
+  const perDay = salary / totalDaysInMonth;
+  const perMin = perDay / MINS_PER_DAY; // for minute-accurate worked time
+
+  const today=new Date(); today.setHours(0,0,0,0);
+
+  let workedMins=0, sundayCount=0, holCount=0, plMins=0;
+  let absentDays=0, presentDays=0, plCount=0;
+
+  for(let day=1;day<=totalDaysInMonth;day++){
+    const date=`${currentYear}-${pad(currentMonth+1)}-${pad(day)}`;
+    const dateObj=new Date(date), dow=dateObj.getDay();
+
+    // Sundays — always fully paid (full month entitlement, count all of them)
+    if(dow===0){ sundayCount++; continue; }
+
+    // Holidays — always fully paid
+    if(holidays[date]){ holCount++; continue; }
+
+    // Future working days — skip (not earned yet)
+    if(dateObj>today) continue;
+
+    const e=attendance[date];
+    if(e?.paidLeave){
+      plCount++; plMins+=PAID_LEAVE_MINS;
+      // If they also logged time on PL day, add that too
+      if(e.checkIn&&e.checkOut){const m=tdm(e.checkIn,e.checkOut);if(m>0)workedMins+=m;}
+    } else if(e&&(e.checkIn||e.checkOut)){
+      presentDays++;
+      if(e.checkIn&&e.checkOut){const m=tdm(e.checkIn,e.checkOut);if(m>0)workedMins+=m;}
+    } else {
+      absentDays++;
+    }
+  }
+
+  // Earned:
+  //   - Sundays & holidays: credited as 1 full day each = perDay each
+  //   - Worked days: credited by exact minutes worked × perMin
+  //   - PL: credited as PL_MINS × perMin (11h 25m per PL day)
+  //   - Absent: 0 earned for that day (deducted)
+  const sundayEarned  = sundayCount * perDay;
+  const holEarned     = holCount    * perDay;
+  const workedEarned  = workedMins  * perMin;
+  const plEarned      = plMins      * perMin;
+  const earned        = sundayEarned + holEarned + workedEarned + plEarned;
+  const deduction     = absentDays  * perDay;   // absent = lose full day pay
+  const net           = earned;
+
+  const fmtINR=n=>'₹ '+Math.round(n).toLocaleString('en-IN');
+  const fmtMin=m=>{const h=Math.floor(m/60),mn=m%60;return mn?`${h}h ${mn}m`:`${h}h`;};
+
+  // Convert worked mins to equivalent days for display
+  const workedDays=(workedMins/MINS_PER_DAY).toFixed(2);
+  const plDays=(plMins/MINS_PER_DAY).toFixed(2);
+  const totalCreditedDays=(workedMins/MINS_PER_DAY)+sundayCount+holCount+(plMins/MINS_PER_DAY);
+
+  if(perDayEl)    perDayEl.textContent   ='₹ '+Math.round(perDay).toLocaleString('en-IN');
+  if(earnedEl)    earnedEl.textContent   =fmtINR(earned);
+  if(deductionEl) deductionEl.textContent=absentDays>0?'- ₹ '+Math.round(deduction).toLocaleString('en-IN'):'₹ 0';
+  if(netEl)       netEl.textContent      =fmtINR(net);
+
+  if(formulaEl) formulaEl.innerHTML=
+    `₹${salary.toLocaleString('en-IN')} ÷ ${totalDaysInMonth} days = ₹${perDay.toFixed(2)}/day<br>`+
+    `Worked ${fmtMin(workedMins)} (${workedDays}d) + ${sundayCount} Sun + ${holCount} Hol`+
+    (plMins?` + PL ${fmtMin(plMins)} (${plDays}d)`:'')+
+    ` = ${totalCreditedDays.toFixed(3)} days<br>`+
+    (absentDays>0
+      ? `Absent ${absentDays} day(s) × ₹${perDay.toFixed(2)} = −₹${Math.round(deduction).toLocaleString('en-IN')}`
+      : `No absences ✓`);
+}
+
+// ── EXPORT CSV ───────────────────────────────────────────────────────────────
+function exportCSV(){
+  const days=new Date(currentYear,currentMonth+1,0).getDate();
+  let csv='Date,Day,Status,Check In,Check Out,Hours,OT/Short,Paid Leave,Note\n';
+  for(let day=1;day<=days;day++){
+    const date=`${currentYear}-${pad(currentMonth+1)}-${pad(day)}`;
+    const dow=new Date(date).getDay();
+    if(dow===0){csv+=`${date},${DAYS[dow]},Sunday,-,-,-,-,No,-\n`;continue;}
+    if(holidays[date]){csv+=`${date},${DAYS[dow]},Holiday(${holidays[date]}),-,-,-,-,No,-\n`;continue;}
+    const e=attendance[date];
+    const pl=e?.paidLeave?'Yes':'No';
+    if(e&&(e.checkIn||e.checkOut||e.paidLeave)){
+      const mins=(e.checkIn&&e.checkOut)?tdm(e.checkIn,e.checkOut):0;
+      const hrs=mins>0?(mins/60).toFixed(2)+'h':(e.paidLeave?'0h':'-');
+      const diff=mins>0?(mins/60-WORK_HOURS).toFixed(2):null;
+      const ot=diff!==null?(diff>0?`+${diff}h OT`:diff<0?`${diff}h short`:'-'):'-';
+      csv+=`${date},${DAYS[dow]},${e.paidLeave?'Paid Leave':'Present'},${e.checkIn||'-'},${e.checkOut||'-'},${hrs},${ot},${pl},"${e.note||''}"\n`;
+    } else { csv+=`${date},${DAYS[dow]},Absent,-,-,-,-,No,-\n`; }
+  }
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download=`Attendance_${MONTHS[currentMonth]}_${currentYear}.csv`;
+  a.click(); toast('CSV exported!');
+}
+
+// ── IMPORT CSV ───────────────────────────────────────────────────────────────
+function importCSV(event){
+  const file=event.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const lines=e.target.result.split('\n').map(l=>l.trim()).filter(l=>l);
+    if(!lines.length){toast('Empty file',true);return;}
+    const cols=lines[0].toLowerCase().split(',').map(c=>c.trim().replace(/"/g,''));
+    const iDate=cols.indexOf('date'),iCI=cols.findIndex(c=>c.includes('check in')),iCO=cols.findIndex(c=>c.includes('check out'));
+    const iPL=cols.findIndex(c=>c.includes('paid leave')),iNote=cols.findIndex(c=>c==='note'),iStatus=cols.indexOf('status');
+    if(iDate===-1){toast('Invalid CSV — no Date column',true);return;}
+    let imported=0,skipped=0;
+    for(let i=1;i<lines.length;i++){
+      const row=parseCSVRow(lines[i]);
+      const date=row[iDate]?.trim();
+      if(!date||!/^\d{4}-\d{2}-\d{2}$/.test(date)){skipped++;continue;}
+      const status=iStatus>=0?row[iStatus]?.trim().toLowerCase():'';
+      const ci=iCI>=0?row[iCI]?.trim():'', co=iCO>=0?row[iCO]?.trim():'';
+      const pl=iPL>=0?row[iPL]?.trim().toLowerCase()==='yes':false;
+      const note=iNote>=0?row[iNote]?.trim().replace(/^"|"$/g,''):'';
+      if(status==='sunday'){skipped++;continue;}
+      if(status.startsWith('holiday')){const m=status.match(/holiday\((.+)\)/);if(m)holidays[date]=m[1];skipped++;continue;}
+      if((ci&&ci!=='-')||(co&&co!=='-')||pl){attendance[date]={checkIn:(ci&&ci!=='-')?ci:'',checkOut:(co&&co!=='-')?co:'',note:note||'',paidLeave:pl};imported++;}
+    }
+    persist(); renderHolidayTags(); renderTable(); updateStats(); updateSalary();
+    toast(`✓ Imported ${imported} entries${skipped?`, ${skipped} skipped`:''}`);
+    event.target.value='';
+  };
+  reader.readAsText(file);
+}
+function parseCSVRow(line){
+  const result=[];let cur='',inQ=false;
+  for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"')inQ=!inQ;else if(ch===','&&!inQ){result.push(cur);cur='';}else cur+=ch;}
+  result.push(cur); return result;
+}
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+function pad(n){return String(n).padStart(2,'0');}
+function fmt(d){return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
+function tdm(t1,t2){const [h1,m1]=t1.split(':').map(Number),[h2,m2]=t2.split(':').map(Number);return (h2*60+m2)-(h1*60+m1);}
+function hl(m){const h=Math.floor(m/60),mn=m%60;return mn?`${h}h ${mn}m`:`${h}h`;}
+function toast(msg,err=false){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='toast show'+(err?' err':'');
+  clearTimeout(el._t); el._t=setTimeout(()=>el.className='toast',2500);
+}
+</script>
 </body>
 </html>
