@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>AttendTrack</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">📋</div>
+      <div class="logo-text">
+        <h1>Attend<span>Track</span></h1>
+        <p>Personal Attendance Manager</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="date" id="hdrDate"></div>
+      <div class="tag">✓ No restrictions</div>
+    </div>
+  </header>
+
+  <!-- TOP GRID: Month | Holidays | Salary -->
+  <div class="top-grid">
+
+    <!-- Month Selector -->
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>Select Month</div>
+      <div class="month-row">
+        <select id="monthSelect"></select>
+        <select id="yearSelect" style="width:90px;flex:none;"></select>
+        <button class="btn btn-green" onclick="loadMonth()" style="flex:none;">Load</button>
+      </div>
+      <div style="margin-top:1rem;">
+        <label class="field-label">Quick Add Entry</label>
+        <div class="input-row" style="flex-wrap:wrap;gap:0.4rem;">
+          <input type="date" id="entryDate" style="flex:1;min-width:130px;">
+          <div style="display:flex;gap:0.4rem;flex:1;min-width:200px;">
+            <input type="time" id="checkIn" style="flex:1;">
+            <input type="time" id="checkOut" style="flex:1;">
+          </div>
+          <input type="text" id="entryNote" placeholder="Note (optional)" style="flex:1;min-width:120px;">
+        </div>
+        <div style="display:flex;gap:0.4rem;margin-top:0.4rem;">
+          <button class="btn btn-green" onclick="saveEntry()" style="flex:1;justify-content:center;">＋ Save</button>
+          <button class="btn btn-ghost" onclick="clearForm()">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Holidays -->
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--yellow);"></span>Holidays <span style="color:var(--text3);font-size:0.55rem;margin-left:4px;">(tap to remove)</span></div>
+      <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+        <input type="date" id="holidayDate" style="flex:1;min-width:120px;">
+        <input type="text" id="holidayName" placeholder="Name" style="flex:1;min-width:100px;">
+        <button class="btn btn-yellow" onclick="addHoliday()" style="flex:none;">Add</button>
+      </div>
+      <div class="tags-wrap" id="holidayTags"></div>
+    </div>
+
+    <!-- Salary -->
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--pink);"></span>Monthly Salary</div>
+      <div class="input-row">
+        <span style="font-family:var(--mono);font-size:0.9rem;color:var(--text2);flex:none;">₹</span>
+        <input type="number" id="salaryInput" placeholder="Enter salary" min="0" oninput="saveSalary()">
+      </div>
+      <div class="salary-grid">
+        <div class="sal-box">
+          <div class="sal-box-label">Per Day Rate</div>
+          <div class="sal-box-val sal-yellow" id="perDaySalary">₹ —</div>
+        </div>
+        <div class="sal-box">
+          <div class="sal-box-label">Earned So Far</div>
+          <div class="sal-box-val sal-green" id="earnedSalary">₹ —</div>
+        </div>
+        <div class="sal-box">
+          <div class="sal-box-label">Deduction</div>
+          <div class="sal-box-val sal-red" id="deductionSalary">₹ —</div>
+        </div>
+        <div class="sal-box" style="border-color:rgba(232,121,160,0.25);background:rgba(232,121,160,0.04);">
+          <div class="sal-box-label">Net Payable</div>
+          <div class="sal-box-val sal-pink" id="netSalary">₹ —</div>
+        </div>
+      </div>
+      <div class="sal-formula" id="salaryFormula">Enter salary above to see calculation</div>
+    </div>
+
+  </div>
+
+  <!-- STATS STRIP -->
+  <div class="stats-strip">
+    <div class="stat s-green">  <div class="stat-num" id="statPresent">0</div> <div class="stat-lbl">Present</div></div>
+    <div class="stat s-red">    <div class="stat-num" id="statAbsent">0</div>  <div class="stat-lbl">Absent</div></div>
+    <div class="stat s-yellow"> <div class="stat-num" id="statHoliday">0</div> <div class="stat-lbl">Holidays</div></div>
+    <div class="stat s-purple"> <div class="stat-num" id="statSunday">0</div>  <div class="stat-lbl">Sundays</div></div>
+    <div class="stat s-pink">   <div class="stat-num" id="statPL">0</div>      <div class="stat-lbl">PL (max 1)</div></div>
+    <div class="stat s-blue">   <div class="stat-num" id="statTotalHrs">0h</div><div class="stat-lbl">Total Hrs</div></div>
+  </div>
+
+  <!-- TABLE CARD -->
+  <div class="table-card">
+    <div class="table-top">
+      <span class="table-top-title" id="tableTitle">Attendance Log</span>
+      <div class="table-top-btns">
+        <label class="btn btn-ghost" style="cursor:pointer;">
+          ⬆ Import CSV
+          <input type="file" accept=".csv" id="csvImport" style="display:none;" onchange="importCSV(event)">
+        </label>
+        <button class="btn btn-ghost" onclick="exportCSV()">⬇ Export CSV</button>
+      </div>
+    </div>
+    <div class="tip-bar" style="margin:0.75rem 1.25rem 0.5rem;">
+      💡 <b>Click any time/note cell</b> to edit inline · <b>+</b> quick-fills 9:30–18:30
+    </div>
+
+    <!-- Desktop Table -->
+    <div class="tbl-scroll" style="padding-bottom:0.5rem;">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th><th>Day</th><th>Status</th>
+            <th>Check In</th><th>Check Out</th>
+            <th>Hours</th><th>OT/Short</th>
+            <th>Paid Leave</th><th>Note</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Mobile Cards -->
+    <div class="day-cards" id="dayCards"></div>
+
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="./script.js"></script>
+</body>
+</html>
