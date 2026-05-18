@@ -26,6 +26,10 @@
   --pink-dim:  rgba(232,121,160,0.08);
   --blue:      #4fa3f7;
   --blue-dim:  rgba(79,163,247,0.08);
+  --orange:    #fb923c;
+  --orange-dim:rgba(251,146,60,0.08);
+  --teal:      #2dd4bf;
+  --teal-dim:  rgba(45,212,191,0.08);
   --text:      #dce4f0;
   --text2:     #8a95a8;
   --text3:     #4a5568;
@@ -196,7 +200,7 @@ label.field-label {
 /* ── STATS STRIP ── */
 .stats-strip {
   display:grid;
-  grid-template-columns:repeat(6,1fr);
+  grid-template-columns:repeat(4,1fr);
   gap:0.75rem;
   margin-bottom:1.25rem;
 }
@@ -216,6 +220,8 @@ label.field-label {
 .stat.s-purple::after { background:var(--purple); }
 .stat.s-pink::after   { background:var(--pink); }
 .stat.s-blue::after   { background:var(--blue); }
+.stat.s-orange::after { background:var(--orange); }
+.stat.s-teal::after   { background:var(--teal); }
 .stat-num {
   font-family:var(--mono); font-size:1.6rem; font-weight:700; line-height:1;
   margin-bottom:0.3rem;
@@ -226,6 +232,8 @@ label.field-label {
 .stat.s-purple .stat-num { color:var(--purple); }
 .stat.s-pink   .stat-num { color:var(--pink); }
 .stat.s-blue   .stat-num { color:var(--blue); }
+.stat.s-orange .stat-num { color:var(--orange); }
+.stat.s-teal   .stat-num { color:var(--teal); }
 .stat-lbl { font-size:0.55rem; font-family:var(--mono); text-transform:uppercase; letter-spacing:1.5px; color:var(--text3); }
 
 /* ── QUICK ADD FORM ── */
@@ -364,7 +372,7 @@ tbody td { padding:0.6rem 0.85rem; font-family:var(--mono); font-size:0.78rem; }
 /* ── RESPONSIVE ── */
 @media (max-width:1100px) {
   .top-grid { grid-template-columns:1fr 1fr; }
-  .stats-strip { grid-template-columns:repeat(3,1fr); }
+  .stats-strip { grid-template-columns:repeat(4,1fr); }  /* already 4-col, no change */
 }
 
 @media (max-width:900px) {
@@ -375,7 +383,7 @@ tbody td { padding:0.6rem 0.85rem; font-family:var(--mono); font-size:0.78rem; }
 @media (max-width:720px) {
   .wrap { padding:1rem 0.75rem; }
   .top-grid { grid-template-columns:1fr; }
-  .stats-strip { grid-template-columns:repeat(3,1fr); gap:0.5rem; }
+  .stats-strip { grid-template-columns:repeat(2,1fr); gap:0.5rem; }
   .stat { padding:0.75rem 0.5rem; }
   .stat-num { font-size:1.3rem; }
   .qf-grid { grid-template-columns:1fr 1fr; gap:0.5rem; }
@@ -389,7 +397,6 @@ tbody td { padding:0.6rem 0.85rem; font-family:var(--mono); font-size:0.78rem; }
 
 @media (max-width:480px) {
   .stats-strip { grid-template-columns:repeat(2,1fr); }
-  .stat.s-blue { display:none; } /* hide total hrs on tiny screen, shown in salary card */
   .qf-grid { grid-template-columns:1fr; }
   .logo-text p { display:none; }
   .salary-grid { grid-template-columns:1fr 1fr; }
@@ -491,6 +498,8 @@ tbody td { padding:0.6rem 0.85rem; font-family:var(--mono); font-size:0.78rem; }
     <div class="stat s-purple"> <div class="stat-num" id="statSunday">0</div>  <div class="stat-lbl">Sundays</div></div>
     <div class="stat s-pink">   <div class="stat-num" id="statPL">0</div>      <div class="stat-lbl">PL (max 1)</div></div>
     <div class="stat s-blue">   <div class="stat-num" id="statTotalHrs">0h</div><div class="stat-lbl">Total Hrs</div></div>
+    <div class="stat s-orange"> <div class="stat-num" id="statOT">0h</div>       <div class="stat-lbl">Overtime</div></div>
+    <div class="stat s-teal">   <div class="stat-num" id="statAttPct">—%</div>    <div class="stat-lbl">Attendance</div></div>
   </div>
 
   <!-- TABLE CARD -->
@@ -822,15 +831,17 @@ function updateMobileCard(date,mc,info){
 // ── STATS ────────────────────────────────────────────────────────────────────
 function updateStats(){
   const days=new Date(currentYear,currentMonth+1,0).getDate();
-  let present=0,absent=0,hols=0,suns=0,plCount=0,totalMins=0;
+  let present=0,absent=0,hols=0,suns=0,plCount=0,totalMins=0,otMins=0,elapsedWorkDays=0;
+  const today=new Date(); today.setHours(0,0,0,0);
   for(let day=1;day<=days;day++){
     const date=`${currentYear}-${pad(currentMonth+1)}-${pad(day)}`;
-    const dow=new Date(date).getDay();
+    const dateObj=new Date(date), dow=dateObj.getDay();
     if(dow===0){suns++;continue;}
     if(holidays[date]){hols++;continue;}
+    if(dateObj<=today) elapsedWorkDays++;
     const e=attendance[date];
     if(e?.paidLeave){plCount++;totalMins+=PAID_LEAVE_MINS;}
-    if(e&&(e.checkIn||e.checkOut)){present++;if(e.checkIn&&e.checkOut){const m=tdm(e.checkIn,e.checkOut);if(m>0)totalMins+=m;}}
+    if(e&&(e.checkIn||e.checkOut)){present++;if(e.checkIn&&e.checkOut){const m=tdm(e.checkIn,e.checkOut);if(m>0){totalMins+=m;if(!e.paidLeave&&m>WORK_HOURS*60)otMins+=m-WORK_HOURS*60;}}}
     else if(!e?.paidLeave) absent++;
   }
   document.getElementById('statPresent').textContent=present;
@@ -840,6 +851,10 @@ function updateStats(){
   document.getElementById('statPL').textContent=plCount;
   const h=Math.floor(totalMins/60),m=totalMins%60;
   document.getElementById('statTotalHrs').textContent=m?`${h}h${m}m`:`${h}h`;
+  const oh=Math.floor(otMins/60),om=otMins%60;
+  document.getElementById('statOT').textContent=otMins?(om?`${oh}h${om}m`:`${oh}h`):'0h';
+  const pct=elapsedWorkDays>0?Math.round((present+plCount)/elapsedWorkDays*100):0;
+  document.getElementById('statAttPct').textContent=elapsedWorkDays>0?pct+'%':'—%';
   updateSalary();
 }
 
