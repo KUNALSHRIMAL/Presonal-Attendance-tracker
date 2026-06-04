@@ -498,7 +498,7 @@ tbody td { padding:0.6rem 0.85rem; font-family:var(--mono); font-size:0.78rem; }
     <div class="stat s-purple"> <div class="stat-num" id="statSunday">0</div>  <div class="stat-lbl">Sundays</div></div>
     <div class="stat s-pink">   <div class="stat-num" id="statPL">0</div>      <div class="stat-lbl">PL (max 1)</div></div>
     <div class="stat s-blue">   <div class="stat-num" id="statTotalHrs">0h</div><div class="stat-lbl">Total Hrs</div></div>
-    <div class="stat s-orange"> <div class="stat-num" id="statOT">0h</div>       <div class="stat-lbl">Overtime</div></div>
+    <div class="stat s-orange" id="statOTCard"> <div class="stat-num" id="statOT">0h</div>       <div class="stat-lbl">Net OT</div></div>
     <div class="stat s-teal">   <div class="stat-num" id="statAttPct">—%</div>    <div class="stat-lbl">Attendance</div></div>
   </div>
 
@@ -546,7 +546,7 @@ const MONTHS=['January','February','March','April','May','June','July','August',
 const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const DAYS_SHORT=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const WORK_HOURS=9;
-const PAID_LEAVE_MINS=685; // 11h 25m
+const PAID_LEAVE_MINS=685; // 11h 25m = 1 day + half day PL credit
 
 let currentMonth, currentYear;
 let attendance={};
@@ -655,9 +655,9 @@ function refreshRow(date){
       const mins=tdm(e.checkIn,e.checkOut);
       if(mins>0){
         hoursHTML=`<span class="dur">${hl(mins)}</span>`;
-        const diff=(mins/60)-WORK_HOURS;
-        if(diff>0.01) otHTML=`<span class="ot">+${diff.toFixed(1)}h</span>`;
-        else if(diff<-0.01) otHTML=`<span class="short">${diff.toFixed(1)}h</span>`;
+        const diffMins=mins-WORK_HOURS*60;
+        if(diffMins>0) otHTML=`<span class="ot">+${fmtOT(diffMins)}</span>`;
+        else if(diffMins<0) otHTML=`<span class="short">-${fmtOT(diffMins)}</span>`;
         else otHTML=`<span style="color:var(--text3)">✓</span>`;
       } else hoursHTML=`<span style="color:var(--red)">⚠</span>`;
     }
@@ -721,9 +721,9 @@ function renderTable(){
       const mins=tdm(e.checkIn,e.checkOut);
       if(mins>0){
         hoursHTML=`<span class="dur">${hl(mins)}</span>`;
-        const diff=(mins/60)-WORK_HOURS;
-        if(diff>0.01) otHTML=`<span class="ot">+${diff.toFixed(1)}h</span>`;
-        else if(diff<-0.01) otHTML=`<span class="short">${diff.toFixed(1)}h</span>`;
+        const diffMins=mins-WORK_HOURS*60;
+        if(diffMins>0) otHTML=`<span class="ot">+${fmtOT(diffMins)}</span>`;
+        else if(diffMins<0) otHTML=`<span class="short">-${fmtOT(diffMins)}</span>`;
         else otHTML=`<span style="color:var(--text3)">✓</span>`;
       } else hoursHTML=`<span style="color:var(--red)">⚠</span>`;
     }
@@ -783,7 +783,7 @@ function updateMobileCard(date,mc,info){
     else if(e&&(e.checkIn||e.checkOut)) badge=`<span class="badge b-present">✓ Present</span>`;
     else badge=`<span class="badge b-absent">✗ Absent</span>`;
     let hoursHTML=`<span style="color:var(--text3)">—</span>`,otHTML=`<span style="color:var(--text3)">—</span>`;
-    if(e&&e.checkIn&&e.checkOut){const mins=tdm(e.checkIn,e.checkOut);if(mins>0){hoursHTML=`<span class="dur">${hl(mins)}</span>`;const diff=(mins/60)-WORK_HOURS;if(diff>0.01)otHTML=`<span class="ot">+${diff.toFixed(1)}h</span>`;else if(diff<-0.01)otHTML=`<span class="short">${diff.toFixed(1)}h</span>`;else otHTML=`<span style="color:var(--text3)">✓</span>`;}else hoursHTML=`<span style="color:var(--red)">⚠</span>`;}
+    if(e&&e.checkIn&&e.checkOut){const mins=tdm(e.checkIn,e.checkOut);if(mins>0){hoursHTML=`<span class="dur">${hl(mins)}</span>`;const diffMins=mins-WORK_HOURS*60;if(diffMins>0)otHTML=`<span class="ot">+${fmtOT(diffMins)}</span>`;else if(diffMins<0)otHTML=`<span class="short">-${fmtOT(diffMins)}</span>`;else otHTML=`<span style="color:var(--text3)">✓</span>`;}else hoursHTML=`<span style="color:var(--red)">⚠</span>`;}
     const days=new Date(currentYear,currentMonth+1,0).getDate();
     let plUsed=0;for(let d2=1;d2<=days;d2++){const dd=`${currentYear}-${pad(currentMonth+1)}-${pad(d2)}`;if(attendance[dd]?.paidLeave)plUsed++;}
     const plLimitReached=plUsed>=1&&!isPL;
@@ -831,7 +831,7 @@ function updateMobileCard(date,mc,info){
 // ── STATS ────────────────────────────────────────────────────────────────────
 function updateStats(){
   const days=new Date(currentYear,currentMonth+1,0).getDate();
-  let present=0,absent=0,hols=0,suns=0,plCount=0,totalMins=0,otMins=0,elapsedWorkDays=0;
+  let present=0,absent=0,hols=0,suns=0,plCount=0,totalMins=0,otMins=0,shortMins=0,elapsedWorkDays=0;
   const today=new Date(); today.setHours(0,0,0,0);
   for(let day=1;day<=days;day++){
     const date=`${currentYear}-${pad(currentMonth+1)}-${pad(day)}`;
@@ -840,9 +840,13 @@ function updateStats(){
     if(holidays[date]){hols++;continue;}
     if(dateObj<=today) elapsedWorkDays++;
     const e=attendance[date];
-    if(e?.paidLeave){plCount++;totalMins+=PAID_LEAVE_MINS;}
-    if(e&&(e.checkIn||e.checkOut)){present++;if(e.checkIn&&e.checkOut){const m=tdm(e.checkIn,e.checkOut);if(m>0){totalMins+=m;if(!e.paidLeave&&m>WORK_HOURS*60)otMins+=m-WORK_HOURS*60;}}}
-    else if(!e?.paidLeave) absent++;
+    if(e?.paidLeave){
+      plCount++; totalMins+=PAID_LEAVE_MINS;
+      if(e.checkIn&&e.checkOut){const m=tdm(e.checkIn,e.checkOut);if(m>0)totalMins+=m;}
+    } else if(e&&(e.checkIn||e.checkOut)){
+      present++;
+      if(e.checkIn&&e.checkOut){const m=tdm(e.checkIn,e.checkOut);if(m>0){totalMins+=m;const d=m-WORK_HOURS*60;if(d>0)otMins+=d;else if(d<0)shortMins+=(-d);}}
+    } else absent++;
   }
   document.getElementById('statPresent').textContent=present;
   document.getElementById('statAbsent').textContent=absent;
@@ -851,8 +855,17 @@ function updateStats(){
   document.getElementById('statPL').textContent=plCount;
   const h=Math.floor(totalMins/60),m=totalMins%60;
   document.getElementById('statTotalHrs').textContent=m?`${h}h${m}m`:`${h}h`;
-  const oh=Math.floor(otMins/60),om=otMins%60;
-  document.getElementById('statOT').textContent=otMins?(om?`${oh}h${om}m`:`${oh}h`):'0h';
+  const netOtMins=otMins-shortMins;
+  const otEl=document.getElementById('statOT'),otCard=document.getElementById('statOTCard');
+  if(netOtMins>=0){
+    otEl.textContent=netOtMins>0?`+${fmtOT(netOtMins)}`:'0h';
+    otEl.style.color='';
+    if(otCard)otCard.className='stat s-orange';
+  }else{
+    otEl.textContent=`-${fmtOT(netOtMins)}`;
+    otEl.style.color='var(--red)';
+    if(otCard)otCard.className='stat s-red';
+  }
   const pct=elapsedWorkDays>0?Math.round((present+plCount)/elapsedWorkDays*100):0;
   document.getElementById('statAttPct').textContent=elapsedWorkDays>0?pct+'%':'—%';
   updateSalary();
@@ -1012,6 +1025,7 @@ function pad(n){return String(n).padStart(2,'0');}
 function fmt(d){return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
 function tdm(t1,t2){const [h1,m1]=t1.split(':').map(Number),[h2,m2]=t2.split(':').map(Number);return (h2*60+m2)-(h1*60+m1);}
 function hl(m){const h=Math.floor(m/60),mn=m%60;return mn?`${h}h ${mn}m`:`${h}h`;}
+function fmtOT(m){const abs=Math.abs(m),h=Math.floor(abs/60),mn=abs%60;return mn?(h?`${h}h ${mn}m`:`${mn}m`):`${h}h`;}
 function toast(msg,err=false){
   const el=document.getElementById('toast');
   el.textContent=msg; el.className='toast show'+(err?' err':'');
