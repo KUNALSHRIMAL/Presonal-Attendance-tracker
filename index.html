@@ -848,6 +848,8 @@ function updateStats(){
       if(e.checkIn&&e.checkOut){const m=tdm(e.checkIn,e.checkOut);if(m>0){totalMins+=m;const d=m-WORK_HOURS*60;if(d>0)otMins+=d;else if(d<0)shortMins+=(-d);}}
     } else absent++;
   }
+  // If PL was not used at all this month, credit PAID_LEAVE_MINS as unused-PL bonus OT
+  if(plCount===0){ totalMins+=PAID_LEAVE_MINS; otMins+=PAID_LEAVE_MINS; }
   document.getElementById('statPresent').textContent=present;
   document.getElementById('statAbsent').textContent=absent;
   document.getElementById('statHoliday').textContent=hols;
@@ -923,16 +925,21 @@ function updateSalary(){
     }
   }
 
+  // If PL was not used at all, credit unused PL as bonus earned mins
+  const unusedPlMins = plCount===0 ? PAID_LEAVE_MINS : 0;
+
   // Earned:
   //   - Sundays & holidays: credited as 1 full day each = perDay each
   //   - Worked days: credited by exact minutes worked × perMin
   //   - PL: credited as PL_MINS × perMin (11h 25m per PL day)
+  //   - Unused PL: credited as PAID_LEAVE_MINS × perMin if no PL taken
   //   - Absent: 0 earned for that day (deducted)
-  const sundayEarned  = sundayCount * perDay;
-  const holEarned     = holCount    * perDay;
-  const workedEarned  = workedMins  * perMin;
-  const plEarned      = plMins      * perMin;
-  const earned        = sundayEarned + holEarned + workedEarned + plEarned;
+  const sundayEarned  = sundayCount   * perDay;
+  const holEarned     = holCount      * perDay;
+  const workedEarned  = workedMins    * perMin;
+  const plEarned      = plMins        * perMin;
+  const unusedPlEarned= unusedPlMins  * perMin;
+  const earned        = sundayEarned + holEarned + workedEarned + plEarned + unusedPlEarned;
   const deduction     = absentDays  * perDay;   // absent = lose full day pay
   const net           = earned;
 
@@ -942,7 +949,8 @@ function updateSalary(){
   // Convert worked mins to equivalent days for display
   const workedDays=(workedMins/MINS_PER_DAY).toFixed(2);
   const plDays=(plMins/MINS_PER_DAY).toFixed(2);
-  const totalCreditedDays=(workedMins/MINS_PER_DAY)+sundayCount+holCount+(plMins/MINS_PER_DAY);
+  const unusedPlDays=(unusedPlMins/MINS_PER_DAY).toFixed(2);
+  const totalCreditedDays=(workedMins/MINS_PER_DAY)+sundayCount+holCount+(plMins/MINS_PER_DAY)+(unusedPlMins/MINS_PER_DAY);
 
   if(perDayEl)    perDayEl.textContent   ='₹ '+Math.round(perDay).toLocaleString('en-IN');
   if(earnedEl)    earnedEl.textContent   =fmtINR(earned);
@@ -953,6 +961,7 @@ function updateSalary(){
     `₹${salary.toLocaleString('en-IN')} ÷ ${totalDaysInMonth} days = ₹${perDay.toFixed(2)}/day<br>`+
     `Worked ${fmtMin(workedMins)} (${workedDays}d) + ${sundayCount} Sun + ${holCount} Hol`+
     (plMins?` + PL ${fmtMin(plMins)} (${plDays}d)`:'')+
+    (unusedPlMins?` + Unused PL ${fmtMin(unusedPlMins)} (${unusedPlDays}d)`:'')+
     ` = ${totalCreditedDays.toFixed(3)} days<br>`+
     (absentDays>0
       ? `Absent ${absentDays} day(s) × ₹${perDay.toFixed(2)} = −₹${Math.round(deduction).toLocaleString('en-IN')}`
