@@ -719,7 +719,7 @@ function refreshRow(date){
   // Refresh desktop row
   const row=document.querySelector(`tr[data-d="${date}"]`);
   if(row){
-    const e=attendance[date]; const dow=new Date(date).getDay();
+    const e=attendance[date]; const dow=dateFromKey(date).getDay();
     const sc=row.querySelector('.sc');
     if(sc){
       if(dow===0) sc.innerHTML=`<span class="badge b-sunday">☀ Sun</span>`;
@@ -784,7 +784,7 @@ function renderTable(){
 
   for(let day=1;day<=days;day++){
     const date=`${currentYear}-${pad(currentMonth+1)}-${pad(day)}`;
-    const dow=new Date(date).getDay();
+    const dow=dateFromKey(date).getDay();
     const isSun=dow===0, isSat=dow===6, isHol=!!holidays[date];
     const e=attendance[date];
 
@@ -830,8 +830,8 @@ function renderTable(){
       <td style="color:var(--text2);white-space:nowrap">${date}</td>
       <td><span style="color:${dayColor}">${DAYS_SHORT[dow]}</span></td>
       <td class="sc">${badge}</td>
-      <td><input class="e-time" type="time" value="${ciVal}" onchange="ic('${date}','checkIn',this.value)"></td>
-      <td><input class="e-time" type="time" value="${coVal}" onchange="ic('${date}','checkOut',this.value)"></td>
+      <td><input class="e-time" type="time" value="${ciVal}" oninput="ic('${date}','checkIn',this.value)" onchange="ic('${date}','checkIn',this.value)"></td>
+      <td><input class="e-time" type="time" value="${coVal}" oninput="ic('${date}','checkOut',this.value)" onchange="ic('${date}','checkOut',this.value)"></td>
       <td class="hc">${hoursHTML}</td>
       <td class="oc">${otHTML}</td>
       <td>${plBtn}</td>
@@ -852,7 +852,7 @@ function renderTable(){
 function updateMobileCard(date,mc,info){
   if(!info){
     // Re-compute minimal info
-    const dow=new Date(date).getDay();
+    const dow=dateFromKey(date).getDay();
     const isSun=dow===0,isSat=dow===6,isHol=!!holidays[date],e=attendance[date];
     const isPL=!!(e?.paidLeave);
     let badge;
@@ -877,7 +877,7 @@ function updateMobileCard(date,mc,info){
   }
   const e=attendance[date];
   const ciVal=e?.checkIn??'', coVal=e?.checkOut??'', noteVal=(e?.note??'').replace(/"/g,'&quot;');
-  const dow=new Date(date).getDay();
+  const dow=dateFromKey(date).getDay();
   mc.innerHTML=`
     <div class="day-card-top">
       <div>
@@ -888,11 +888,11 @@ function updateMobileCard(date,mc,info){
     <div class="day-card-body">
       <div class="day-card-field">
         <label>Check In</label>
-        <input class="e-time" style="width:100%" type="time" value="${ciVal}" onchange="ic('${date}','checkIn',this.value)">
+        <input class="e-time" style="width:100%" type="time" value="${ciVal}" oninput="ic('${date}','checkIn',this.value)" onchange="ic('${date}','checkIn',this.value)">
       </div>
       <div class="day-card-field">
         <label>Check Out</label>
-        <input class="e-time" style="width:100%" type="time" value="${coVal}" onchange="ic('${date}','checkOut',this.value)">
+        <input class="e-time" style="width:100%" type="time" value="${coVal}" oninput="ic('${date}','checkOut',this.value)" onchange="ic('${date}','checkOut',this.value)">
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;flex-wrap:wrap;">
@@ -914,7 +914,7 @@ function updateStats(){
   const today=new Date(); today.setHours(0,0,0,0);
   for(let day=1;day<=days;day++){
     const date=`${currentYear}-${pad(currentMonth+1)}-${pad(day)}`;
-    const dateObj=new Date(date), dow=dateObj.getDay();
+    const dateObj=dateFromKey(date), dow=dateObj.getDay();
     if(dow===0){suns++;continue;}
     if(holidays[date]){hols++;continue;}
     if(dateObj<=today) elapsedWorkDays++;
@@ -980,7 +980,7 @@ function updateSalary(){
 
   for(let day=1;day<=totalDaysInMonth;day++){
     const date=`${currentYear}-${pad(currentMonth+1)}-${pad(day)}`;
-    const dateObj=new Date(date), dow=dateObj.getDay();
+    const dateObj=dateFromKey(date), dow=dateObj.getDay();
 
     // Sundays — always fully paid (full month entitlement, count all of them)
     if(dow===0){ sundayCount++; continue; }
@@ -1053,7 +1053,7 @@ function exportCSV(){
   let csv='Date,Day,Status,Check In,Check Out,Hours,OT/Short,Paid Leave,Note\n';
   for(let day=1;day<=days;day++){
     const date=`${currentYear}-${pad(currentMonth+1)}-${pad(day)}`;
-    const dow=new Date(date).getDay();
+    const dow=dateFromKey(date).getDay();
     if(dow===0){csv+=`${date},${DAYS[dow]},Sunday,-,-,-,-,No,-\n`;continue;}
     if(holidays[date]){csv+=`${date},${DAYS[dow]},Holiday(${holidays[date]}),-,-,-,-,No,-\n`;continue;}
     const e=attendance[date];
@@ -1111,6 +1111,7 @@ function parseCSVRow(line){
 // ── HELPERS ──────────────────────────────────────────────────────────────────
 function pad(n){return String(n).padStart(2,'0');}
 function fmt(d){return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
+function dateFromKey(date){const [y,m,d]=date.split('-').map(Number);return new Date(y,m-1,d);}
 function tdm(t1,t2){const [h1,m1]=t1.split(':').map(Number),[h2,m2]=t2.split(':').map(Number);return (h2*60+m2)-(h1*60+m1);}
 function hl(m){const h=Math.floor(m/60),mn=m%60;return mn?`${h}h ${mn}m`:`${h}h`;}
 function fmtOT(m){const abs=Math.abs(m),h=Math.floor(abs/60),mn=abs%60;return mn?(h?`${h}h ${mn}m`:`${mn}m`):`${h}h`;}
