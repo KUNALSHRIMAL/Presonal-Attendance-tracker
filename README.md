@@ -1,161 +1,115 @@
-# 📋 AttendTrack
+# AttendTrack
 
-A personal attendance tracker built as a **single HTML file** — no server, no dependencies, no install. Just open it in any browser and start tracking.
+AttendTrack is a personal attendance and salary tracker that runs directly in the browser. There is no backend, account, build step, or package install.
 
-![Dark UI](https://img.shields.io/badge/UI-Dark%20Mode-1a2030?style=flat-square)
-![Mobile](https://img.shields.io/badge/Responsive-Mobile%20Ready-10d98a?style=flat-square)
-![Size](https://img.shields.io/badge/Size-Single%20File-f5c842?style=flat-square)
-![Storage](https://img.shields.io/badge/Storage-LocalStorage-9d7ff5?style=flat-square)
+## Features
 
----
+### Attendance Logging
 
-## ✨ Features
+- Select any month and year to view or edit attendance.
+- Add entries with date, check-in time, check-out time, and an optional note.
+- Edit time and note fields inline from the table.
+- Quick-fill a day with default hours: `09:30` to `18:30`.
+- Default working day is 9 hours.
+- Mobile view switches from a table to day cards for easier tapping.
 
-### 🗓 Attendance Logging
-- Select any **month & year** to view or edit that month's log
-- **Quick Add form** at the top — enter date, check-in, check-out, and a note
-- **Inline editing** — click directly on any time or note cell in the table to edit it
-- **Quick fill button (`+`)** on each row auto-fills default hours (9:30 → 18:30)
-- Default working hours: **9:30 AM to 6:30 PM (9 hours/day)**
+### Leave, Holidays, and Off Days
 
-### ☀️ Leave & Off Days
-- **Sundays** are automatically marked as weekly off — no attendance needed
-- **Holidays** can be added with a custom name and date — counted as paid days
-- **Paid Leave (PL)** — mark any working day as paid leave
-  - Only **1.25 days (1 PL day)** allowed per month
-  - PL adds **11 hours 25 minutes (685 minutes)** to your total worked hours
-  - Once the monthly limit is reached, all other PL buttons are disabled
+- Sundays are automatically treated as weekly off days.
+- Holidays can be added with a custom name and are counted as paid days.
+- Paid Leave (PL) can be marked on working days.
+- PL is limited to 1 day per month.
+- PL credits 685 minutes, equal to 11 hours 25 minutes.
 
-### 💰 Salary Calculator
-- Enter your **monthly salary (₹)** once — it's saved for future sessions
-- Salary is calculated **per minute**, not per day
-- Formula: `Monthly Salary ÷ (Total Days × 540 mins) = Rate per minute`
-- Shows live:
-  - **Per Day Rate**
-  - **Earned So Far** (based on actual minutes worked + Sundays + holidays + PL)
-  - **Deduction** (absent days only)
-  - **Net Payable**
-- Sundays and holidays are always **fully paid**
-- Only **absent working days** cause deductions
+### Salary Calculator
 
-### 📊 Stats Dashboard
-| Card | Description |
-|------|-------------|
-| 🟢 Present | Days you logged attendance |
-| 🔴 Absent | Working days with no entry (up to today) |
-| 🟡 Holidays | Custom holidays added for the month |
-| 🟣 Sundays | Weekly off days |
-| 🩷 PL | Paid leave days used (max 1) |
-| 🔵 Total Hrs | Total hours including PL |
+- Save monthly salary in browser `localStorage`.
+- Salary is calculated by minutes worked, not only by full days.
+- Sundays and holidays are credited as full paid days.
+- PL and unused PL are credited according to the app rules.
+- Late arrivals or early exits reduce earned pay through short-time deduction.
+- The deduction card shows the actual difference between monthly salary and earned pay.
 
-### 💾 Data & Backup
-- All data saved automatically in **browser localStorage** — no account needed
-- **Export CSV** — download a full month's attendance as a `.csv` file
-- **Import CSV** — recover your data from a previously exported file
-  - Smart parser handles check-in/out times, paid leave, notes, and holidays
+### Payslip Generator
 
----
+- Click `Download Pay Slip` to enter employee details.
+- Employee details are saved in `localStorage` for the next payslip.
+- Payable days are auto-filled from the selected month.
+- Gross earnings, gross deductions, net pay, and net pay in words are generated automatically.
+- The payslip uses the included `logo.png` and is formatted to match the reference salary slip.
+- The browser print dialog opens so the payslip can be saved as PDF.
 
-## 🚀 Getting Started
+Note: Chrome and Edge print headers/footers are controlled by the browser. If they appear in the PDF preview, turn off `Headers and footers` in the print dialog.
 
-1. **Download** `attendance-tracker.html`
-2. **Open** it in any browser (Chrome, Firefox, Safari, Edge)
-3. That's it — no install, no setup
+### CSV Backup
 
-```
-No npm install. No build step. No backend. Just open the file.
+- Export the selected month as a CSV file.
+- Import a previously exported CSV file to restore attendance, notes, PL, and holidays.
+
+## Getting Started
+
+1. Download or clone this repository.
+2. Open `index.html` in a browser.
+3. Start tracking attendance.
+
+No `npm install`, no server, and no build step are required.
+
+## File Structure
+
+```text
+index.html        App markup
+styles.css        App styling
+app.js            App logic, salary logic, CSV import/export, payslip generator
+logo.png          Payslip logo
+README.md         Project documentation
 ```
 
----
+## Salary Calculation Logic
 
-## 📱 Mobile Support
+```text
+Per Day Rate    = Monthly Salary / Days in selected month
+Per Minute Rate = Per Day Rate / 540
 
-The app is fully responsive:
+Earned Pay =
+  Sunday full-day credit
+  + holiday full-day credit
+  + worked minutes * per-minute rate
+  + PL minutes * per-minute rate
+  + unused PL minutes * per-minute rate
 
-| Screen Size | Layout |
-|-------------|--------|
-| Desktop (> 720px) | Full table view with inline editable cells |
-| Tablet (720px–1100px) | Compact 2-column grid, scrollable table |
-| Mobile (< 720px) | Day cards layout — one card per day, large tap targets |
-| Small phones (< 480px) | Single-column stacked layout |
-
----
-
-## 🗂 File Structure
-
-```
-attendance-tracker.html   ← The entire app (HTML + CSS + JS, single file)
-README.md
+Deduction = Monthly Salary - Earned Pay
+Net Pay   = Earned Pay
 ```
 
----
+Example for June 2026:
 
-## 🧮 Salary Calculation Logic
-
-```
-Per Minute Rate  = Monthly Salary ÷ (Days in Month × 540)
-
-Earned So Far    = (Worked Minutes + Sunday Minutes + Holiday Minutes + PL Minutes)
-                   × Per Minute Rate
-
-Deduction        = Absent Days × 540 × Per Minute Rate
-
-Net Payable      = Earned So Far
+```text
+Monthly salary: 22500
+Earned pay:     20739
+Deduction:      1761
 ```
 
-> **Example:** ₹30,000 salary, 30-day month → ₹30,000 ÷ 16,200 mins = ₹1.85/min
-> Work 8h 45m one day → earn ₹30,000 × (525 ÷ 16,200) = ₹972 for that day
+## Data Storage
 
----
+All data is stored locally in the browser using `localStorage`:
 
-## 💡 Tips
+- Attendance entries
+- Holidays
+- Monthly salary
+- Theme preference
+- Payslip employee details
 
-- **Edit any past date** — click the time cell in any row, any month
-- **Sunday attendance blocked** by default, but you can still fill time if needed (no restrictions mode)
-- **Holidays are global** — if you add a holiday, it shows on every month view
-- **PL is per month** — each month has its own 1.25 day PL allowance
-- **Import CSV to recover data** — always export at month end as a backup
+Because the data is local to the browser, export CSV backups regularly.
 
----
+## Browser Support
 
-## 🛠 Tech Stack
+AttendTrack is designed for modern browsers:
 
-| Layer | Technology |
-|-------|-----------|
-| Structure | HTML5 |
-| Styling | CSS3 (custom properties, CSS Grid, Flexbox) |
-| Logic | Vanilla JavaScript (ES2020) |
-| Storage | Browser `localStorage` |
-| Fonts | Inter + JetBrains Mono (Google Fonts) |
-| Dependencies | **None** |
+- Chrome
+- Edge
+- Firefox
+- Safari
 
----
+## License
 
-## 📸 UI Overview
-
-```
-┌─────────────────────────────────────────────────────┐
-│  📋 AttendTrack          Wed Feb 25 2026             │
-├──────────────┬──────────────┬───────────────────────┤
-│  Month/      │  Holidays    │  💰 Salary Calculator  │
-│  Quick Add   │  Manager     │  ₹ Per Day / Earned   │
-├──────┬───────┴──────┬───────┴───────┬───────┬───────┤
-│  ✓   │  ✗ Absent   │  🎉 Holidays  │  ☀ Sun│  🔵Hrs │
-│  12  │     2        │      1        │   4   │ 108h  │
-├──────┴─────────────────────────────────────────────-┤
-│  Date    Day   Status   In      Out    Hours  OT/PL  │
-│  ...01   Mon   ✓ Present 09:30  18:30  9h     ✓     │
-│  ...02   Tue   ✗ Absent  —      —      —      —     │
-│  ...03   Wed   🌴 PL     —      —      11h25  🌴 ON │
-└─────────────────────────────────────────────────────┘
-```
-
----
-
-## 📄 License
-
-Personal use. Free to modify and adapt for your own needs.
-
----
-
-Made with ☕ as a zero-dependency personal productivity tool.
+Personal use. Free to modify and adapt for your own workflow.
