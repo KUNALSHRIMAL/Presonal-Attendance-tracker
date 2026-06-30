@@ -529,6 +529,8 @@ function downloadPaySlip(event){
   event.preventDefault();
   const data={};
   PAYSLIP_FIELDS.forEach(id=>data[id]=document.getElementById(id).value.trim());
+  normalizePayslipData(data);
+  PAYSLIP_FIELDS.forEach(id=>{ const el=document.getElementById(id); if(el) el.value=data[id]; });
   const salary=parseFloat(data.psSalary)||0;
   if(salary<=0){toast('Enter salary amount',true);return;}
   localStorage.setItem('att_payslip_info',JSON.stringify(data));
@@ -739,6 +741,14 @@ function fmtOT(m){const abs=Math.abs(m),h=Math.floor(abs/60),mn=abs%60;return mn
 function getMonthDays(year,month){return new Date(year,month+1,0).getDate();}
 function roundMoney(n){return Math.round((Number(n)||0)*100)/100;}
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function normalizePayslipData(data){
+  ['psEmpName','psFather','psDesignation','psDepartment'].forEach(key=>data[key]=toTitleCase(data[key]));
+  ['psEmpCode','psPan'].forEach(key=>data[key]=String(data[key]||'').toUpperCase());
+  return data;
+}
+function toTitleCase(value){
+  return String(value||'').toLowerCase().replace(/\b([a-z])/g,char=>char.toUpperCase());
+}
 function formatInputDate(value){
   if(!value) return '';
   const [y,m,d]=value.split('-');

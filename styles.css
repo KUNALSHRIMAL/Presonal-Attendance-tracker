@@ -133,6 +133,8 @@ input, select, textarea {
 input:focus, select:focus { border-color:var(--green); background:var(--surface3); }
 input::placeholder { color:var(--text3); }
 select option { background:var(--surface2); }
+.auto-title { text-transform:capitalize; }
+.auto-upper { text-transform:uppercase; }
 
 .input-row { display:flex; gap:0.5rem; align-items:center; }
 .input-row input, .input-row select { flex:1; }
