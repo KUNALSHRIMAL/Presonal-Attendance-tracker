@@ -55,7 +55,7 @@ function toggleTheme(){
 function persist(){
   localStorage.setItem('att_v2',JSON.stringify(attendance));
   localStorage.setItem('att_hol',JSON.stringify(holidays));
-  if(monthlySalary) localStorage.setItem('att_salary',monthlySalary);
+  localStorage.setItem('att_salary',monthlySalary);
 }
 
 // ── MONTH ────────────────────────────────────────────────────────────────────
@@ -504,7 +504,7 @@ function parseCSVRow(line){
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
 // Payslip
-const PAYSLIP_FIELDS=['psEmpCode','psEmpName','psDoj','psFather','psDob','psPan','psDesignation','psDepartment','psBank','psSalary'];
+const PAYSLIP_FIELDS=['psEmpCode','psEmpName','psDoj','psFather','psDob','psPan','psDesignation','psDepartment','psBank','psSalary','psNetPayable'];
 
 function openPayslipModal(){
   const days=getMonthDays(currentYear,currentMonth);
@@ -516,13 +516,28 @@ function openPayslipModal(){
     if(!el) return;
     if(saved[id]) el.value=saved[id];
   });
-  if(!document.getElementById('psSalary').value && monthlySalary) document.getElementById('psSalary').value=monthlySalary;
+  const salaryForCalc = monthlySalary || parseFloat(document.getElementById('salaryInput')?.value) || 0;
+  if(!document.getElementById('psSalary').value && salaryForCalc) document.getElementById('psSalary').value=salaryForCalc;
+  if(salaryForCalc>0){
+    const skipFuture=document.getElementById('psSkipFuture').checked;
+    const pay=calculatePayslipPay(salaryForCalc,skipFuture);
+    document.getElementById('psNetPayable').value=pay.net;
+  }
   document.getElementById('payslipModal').classList.add('show');
   setTimeout(()=>document.getElementById('psEmpCode')?.focus(),50);
 }
 
 function closePayslipModal(){
   document.getElementById('payslipModal').classList.remove('show');
+}
+
+function recalcPayslipNet(){
+  const salaryVal=parseFloat(document.getElementById('psSalary').value)||monthlySalary||0;
+  if(salaryVal>0){
+    const skipFuture=document.getElementById('psSkipFuture').checked;
+    const pay=calculatePayslipPay(salaryVal,skipFuture);
+    document.getElementById('psNetPayable').value=pay.net;
+  }
 }
 
 function downloadPaySlip(event){
@@ -548,13 +563,17 @@ function downloadPaySlip(event){
 
 function buildPayslipData(data,salary){
   const payableDays=getMonthDays(currentYear,currentMonth);
-  const pay=calculatePayslipPay(salary);
+  const skipFuture=document.getElementById('psSkipFuture').checked;
+  const pay=calculatePayslipPay(salary,skipFuture);
   const gross=Math.round(salary);
   const basic=roundMoney(salary*0.50);
   const special=roundMoney(salary*0.25);
-  const hra=roundMoney(salary-basic-special);
-  const net=Math.max(0,pay.net);
+  const hra=roundMoney(gross-basic-special);
+  const userNet=parseFloat(data.psNetPayable);
+  const net=(!isNaN(userNet)&&userNet>=0)?Math.round(userNet):Math.max(0,pay.net);
   const deduction=Math.max(0,gross-net);
+  const perDay=salary/payableDays;
+  const absentDays=deduction>0?Math.round(deduction/perDay):0;
   return {
     companyName:'PURE COSMECEUTICALS PVT LTD',
     companyAddress:'F-18, First Floor, Road No-2, VKI Area, Sikar Road, Jaipur 302013',
@@ -571,7 +590,7 @@ function buildPayslipData(data,salary){
     month:`${MONTHS[currentMonth]} ${currentYear}`,
     monthTitle:`${MONTHS[currentMonth]}.-${currentYear}`,
     payableDays,
-    absentDays:pay.absentDays,
+    absentDays,
     creditedDays:pay.creditedDays,
     workedMins:pay.workedMins,
     gross,
@@ -584,17 +603,20 @@ function buildPayslipData(data,salary){
   };
 }
 
-function calculatePayslipPay(salary){
+function calculatePayslipPay(salary, skipFuture=true){
   const days=getMonthDays(currentYear,currentMonth);
   const minsPerDay=WORK_HOURS*60;
   const perDay=salary/days;
   const perMin=perDay/minsPerDay;
   let workedMins=0,sundayCount=0,holCount=0,plMins=0,plCount=0,absentDays=0;
+  const today=new Date(); today.setHours(0,0,0,0);
   for(let day=1;day<=days;day++){
     const date=`${currentYear}-${pad(currentMonth+1)}-${pad(day)}`;
-    const dow=dateFromKey(date).getDay();
+    const dateObj=dateFromKey(date);
+    const dow=dateObj.getDay();
     if(dow===0){sundayCount++;continue;}
     if(holidays[date]){holCount++;continue;}
+    if(skipFuture&&dateObj>today) continue;
     const e=attendance[date];
     if(e?.paidLeave){
       plCount++;
