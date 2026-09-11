@@ -121,7 +121,7 @@ function refreshRow(date){
       else if(e&&(e.checkIn||e.checkOut)) sc.innerHTML=`<span class="badge b-present">✓ Present</span>`;
       else sc.innerHTML=`<span class="badge b-absent">✗ Absent</span>`;
     }
-    const hc=row.querySelector('.hc'), oc=row.querySelector('.oc'), bc=row.querySelector('.bc');
+    const hc=row.querySelector('.hc'), oc=row.querySelector('.oc'), bc=row.querySelector('.bc'), poc=row.querySelector('.poc');
     let hoursHTML=`<span style="color:var(--text3)">—</span>`, otHTML=`<span style="color:var(--text3)">—</span>`;
     if(e&&e.checkIn&&e.checkOut){
       const mins=tdm(e.checkIn,e.checkOut);
@@ -135,6 +135,7 @@ function refreshRow(date){
     }
     if(hc) hc.innerHTML=hoursHTML;
     if(oc) oc.innerHTML=otHTML;
+    if(poc) poc.innerHTML=payoutHTML(date);
     if(bc){
       const hasData=e&&(e.checkIn||e.checkOut||e.note||e.paidLeave);
       bc.innerHTML=hasData?`<button class="row-btn" onclick="delEntry('${date}')" title="Clear">✕</button>`
@@ -228,6 +229,7 @@ function renderTable(){
       <td class="hc">${hoursHTML}</td>
       <td class="oc">${otHTML}</td>
       <td>${plBtn}</td>
+      <td class="poc">${payoutHTML(date)}</td>
       <td><input class="e-note" type="text" value="${noteVal}" placeholder="note…" onchange="ic('${date}','note',this.value)"></td>
       <td class="bc">${hasData?`<button class="row-btn" onclick="delEntry('${date}')">✕</button>`:`<button class="row-btn add" onclick="qfill('${date}')">＋</button>`}</td>
     `;
@@ -291,6 +293,7 @@ function updateMobileCard(date,mc,info){
     <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;flex-wrap:wrap;">
       <span>${info.hoursHTML}</span>
       <span>${info.otHTML}</span>
+      <span class="mc-poc">${payoutHTML(date)}</span>
     </div>
     <div class="day-card-actions">
       ${info.plBtn}
@@ -298,6 +301,49 @@ function updateMobileCard(date,mc,info){
       ${info.hasData?`<button class="row-btn" onclick="delEntry('${date}')">✕</button>`:`<button class="row-btn add" onclick="qfill('${date}')">＋</button>`}
     </div>
   `;
+}
+
+// ── DAY PAYOUT ───────────────────────────────────────────────────────────────
+function computeDayPayout(date){
+  const salary=monthlySalary||parseFloat(document.getElementById('salaryInput')?.value)||0;
+  if(!salary||salary<=0) return null;
+  const totalDaysInMonth=new Date(currentYear,currentMonth+1,0).getDate();
+  const perDay=salary/totalDaysInMonth;
+  const perMin=perDay/(WORK_HOURS*60);
+  const dateObj=dateFromKey(date), dow=dateObj.getDay();
+  if(dow===0) return {amount:perDay,future:false};
+  if(holidays[date]) return {amount:perDay,future:false};
+  const today=new Date(); today.setHours(0,0,0,0);
+  if(dateObj>today) return {amount:null,future:true};
+  const e=attendance[date];
+  if(e?.paidLeave){
+    let mins=PAID_LEAVE_MINS;
+    if(e.checkIn&&e.checkOut){const m=tdm(e.checkIn,e.checkOut); if(m>0) mins+=m;}
+    return {amount:mins*perMin,future:false};
+  }
+  if(e&&e.checkIn&&e.checkOut){
+    const m=tdm(e.checkIn,e.checkOut);
+    if(m>0) return {amount:m*perMin,future:false};
+  }
+  return {amount:0,future:false};
+}
+function payoutHTML(date){
+  const p=computeDayPayout(date);
+  if(!p||p.future) return `<span style="color:var(--text3)">—</span>`;
+  const amt=Math.round(p.amount);
+  return amt>0
+    ? `<span style="color:var(--green);font-weight:600;">₹${amt.toLocaleString('en-IN')}</span>`
+    : `<span style="color:var(--text3)">₹0</span>`;
+}
+function refreshPayoutColumn(){
+  document.querySelectorAll('#tableBody tr[data-d]').forEach(tr=>{
+    const poc=tr.querySelector('.poc');
+    if(poc) poc.innerHTML=payoutHTML(tr.dataset.d);
+  });
+  document.querySelectorAll('.day-card[data-d]').forEach(mc=>{
+    const poc=mc.querySelector('.mc-poc');
+    if(poc) poc.innerHTML=payoutHTML(mc.dataset.d);
+  });
 }
 
 // ── STATS ────────────────────────────────────────────────────────────────────
@@ -352,13 +398,15 @@ function updateSalary(){
   const salary=monthlySalary||parseFloat(document.getElementById('salaryInput')?.value)||0;
   const perDayEl=document.getElementById('perDaySalary'),earnedEl=document.getElementById('earnedSalary'),
         deductionEl=document.getElementById('deductionSalary'),netEl=document.getElementById('netSalary'),
+        totalPayoutEl=document.getElementById('totalPayoutSalary'),
         formulaEl=document.getElementById('salaryFormula');
   const totalDaysInMonth=new Date(currentYear,currentMonth+1,0).getDate();
   const MINS_PER_DAY=WORK_HOURS*60; // 540
 
   if(!salary||salary<=0){
-    [perDayEl,earnedEl,deductionEl,netEl].forEach(el=>{if(el)el.textContent='₹ —';});
+    [perDayEl,earnedEl,deductionEl,netEl,totalPayoutEl].forEach(el=>{if(el)el.textContent='₹ —';});
     if(formulaEl)formulaEl.textContent='Enter salary above to see calculation';
+    refreshPayoutColumn();
     return;
   }
 
@@ -368,7 +416,7 @@ function updateSalary(){
 
   const today=new Date(); today.setHours(0,0,0,0);
 
-  let workedMins=0, sundayCount=0, holCount=0, plMins=0;
+  let workedMins=0, sundayCount=0, holCount=0, plMins=0, futureWorkDays=0;
   let absentDays=0, presentDays=0, plCount=0;
 
   for(let day=1;day<=totalDaysInMonth;day++){
@@ -381,8 +429,8 @@ function updateSalary(){
     // Holidays — always fully paid
     if(holidays[date]){ holCount++; continue; }
 
-    // Future working days — skip (not earned yet)
-    if(dateObj>today) continue;
+    // Future working days — not earned yet, but projected as a full day if attendance stays normal
+    if(dateObj>today){ futureWorkDays++; continue; }
 
     const e=attendance[date];
     if(e?.paidLeave){
@@ -415,6 +463,10 @@ function updateSalary(){
   const deduction     = Math.max(0, salary - earned);
   const net           = earned;
 
+  // Projected total for the whole month: earned so far + remaining future working days at full rate
+  const projectedFutureEarned = futureWorkDays * perDay;
+  const totalMonthlyPayout    = earned + projectedFutureEarned;
+
   const fmtINR=n=>'₹ '+Math.round(n).toLocaleString('en-IN');
   const fmtMin=m=>{const h=Math.floor(m/60),mn=m%60;return mn?`${h}h ${mn}m`:`${h}h`;};
 
@@ -428,6 +480,7 @@ function updateSalary(){
   if(earnedEl)    earnedEl.textContent   =fmtINR(earned);
   if(deductionEl) deductionEl.textContent=deduction>0?'- ₹ '+Math.round(deduction).toLocaleString('en-IN'):'₹ 0';
   if(netEl)       netEl.textContent      =fmtINR(net);
+  if(totalPayoutEl) totalPayoutEl.textContent=fmtINR(totalMonthlyPayout);
 
   if(formulaEl) formulaEl.innerHTML=
     `₹${salary.toLocaleString('en-IN')} ÷ ${totalDaysInMonth} days = ₹${perDay.toFixed(2)}/day<br>`+
@@ -438,7 +491,10 @@ function updateSalary(){
     (deduction>0
       ? `Deduction = ₹${salary.toLocaleString('en-IN')} − earned = −₹${Math.round(deduction).toLocaleString('en-IN')}`+
         (absentDays>0?` (${absentDays} absent day${absentDays>1?'s':''} included)`:'')
-      : `No deduction ✓`);
+      : `No deduction ✓`)+
+    (futureWorkDays>0?`<br>Total Monthly Payout = Earned So Far + ${futureWorkDays} remaining day${futureWorkDays>1?'s':''} × ₹${perDay.toFixed(2)} = ${fmtINR(totalMonthlyPayout)}`:'');
+
+  refreshPayoutColumn();
 }
 
 // ── EXPORT CSV ───────────────────────────────────────────────────────────────
