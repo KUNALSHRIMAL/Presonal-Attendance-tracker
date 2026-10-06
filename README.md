@@ -19,7 +19,7 @@ AttendTrack is a personal attendance and salary tracker that runs directly in th
 - Holidays can be added with a custom name and are counted as paid days.
 - Paid Leave (PL) can be marked on working days.
 - PL is limited to 1 day per month.
-- PL credits 685 minutes, equal to 11 hours 25 minutes.
+- PL credit is configurable in days and defaults to 1.27 working days.
 
 ### Salary Calculator
 
@@ -96,6 +96,7 @@ All data is stored locally in the browser using `localStorage`:
 - Attendance entries
 - Holidays
 - Monthly salary
+- Monthly PL credit days
 - Theme preference
 - Payslip employee details
 

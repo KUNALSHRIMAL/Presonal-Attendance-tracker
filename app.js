@@ -3,12 +3,17 @@ const MONTHS=['January','February','March','April','May','June','July','August',
 const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const DAYS_SHORT=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const WORK_HOURS=9;
-const PAID_LEAVE_MINS=685; // 11h 25m = 1 day + half day PL credit
+const DEFAULT_PL_CREDIT_DAYS=1.27;
 
 let currentMonth, currentYear;
 let attendance={};
 let holidays={};
 let monthlySalary=0;
+let plCreditDays=DEFAULT_PL_CREDIT_DAYS;
+
+function getPaidLeaveMins(){
+  return Math.round(plCreditDays*WORK_HOURS*60);
+}
 
 // ── THEME ────────────────────────────────────────────────────────────────────
 function applyTheme(theme){
@@ -43,10 +48,15 @@ function toggleTheme(){
   document.getElementById('checkOut').value='18:30';
 
   try{
-    const a=localStorage.getItem('att_v2'), h=localStorage.getItem('att_hol'), s=localStorage.getItem('att_salary');
+    const a=localStorage.getItem('att_v2'), h=localStorage.getItem('att_hol'), s=localStorage.getItem('att_salary'), pl=localStorage.getItem('att_pl_credit_days');
     if(a) attendance=JSON.parse(a);
     if(h) holidays=JSON.parse(h);
     if(s){ monthlySalary=parseFloat(s)||0; document.getElementById('salaryInput').value=monthlySalary||''; }
+    if(pl!==null){
+      const savedPL=parseFloat(pl);
+      if(Number.isFinite(savedPL)&&savedPL>=0) plCreditDays=savedPL;
+    }
+    document.getElementById('plCreditDays').value=plCreditDays;
   }catch(e){}
 
   renderHolidayTags(); loadMonth();
@@ -56,6 +66,7 @@ function persist(){
   localStorage.setItem('att_v2',JSON.stringify(attendance));
   localStorage.setItem('att_hol',JSON.stringify(holidays));
   localStorage.setItem('att_salary',monthlySalary);
+  localStorage.setItem('att_pl_credit_days',plCreditDays);
 }
 
 // ── MONTH ────────────────────────────────────────────────────────────────────
@@ -317,7 +328,7 @@ function computeDayPayout(date){
   if(dateObj>today) return {amount:null,future:true};
   const e=attendance[date];
   if(e?.paidLeave){
-    let mins=PAID_LEAVE_MINS;
+    let mins=getPaidLeaveMins();
     if(e.checkIn&&e.checkOut){const m=tdm(e.checkIn,e.checkOut); if(m>0) mins+=m;}
     return {amount:mins*perMin,future:false};
   }
@@ -358,7 +369,7 @@ function updateStats(){
     if(holidays[date]){hols++;continue;}
     const e=attendance[date];
     if(e?.paidLeave){
-      plCount++; totalMins+=PAID_LEAVE_MINS;
+      plCount++; totalMins+=getPaidLeaveMins();
       if(e.checkIn&&e.checkOut){const m=tdm(e.checkIn,e.checkOut);if(m>0)totalMins+=m;}
     } else if(e&&(e.checkIn||e.checkOut)){
       present++;
@@ -366,8 +377,8 @@ function updateStats(){
     } else if(dateObj<=today) absent++;
     if(dateObj<=today) elapsedWorkDays++;
   }
-  // If PL was not used at all this month, credit PAID_LEAVE_MINS as unused-PL bonus OT
-  if(plCount===0){ totalMins+=PAID_LEAVE_MINS; otMins+=PAID_LEAVE_MINS; }
+  // If PL was not used at all this month, credit its configured value as unused-PL bonus OT
+  if(plCount===0){ const plMins=getPaidLeaveMins(); totalMins+=plMins; otMins+=plMins; }
   document.getElementById('statPresent').textContent=present;
   document.getElementById('statAbsent').textContent=absent;
   document.getElementById('statHoliday').textContent=hols;
@@ -393,6 +404,15 @@ function updateStats(){
 
 // ── SALARY ───────────────────────────────────────────────────────────────────
 function saveSalary(){ monthlySalary=parseFloat(document.getElementById('salaryInput').value)||0; localStorage.setItem('att_salary',monthlySalary); updateSalary(); }
+
+function savePLCreditDays(){
+  const input=document.getElementById('plCreditDays');
+  const value=parseFloat(input.value);
+  if(!Number.isFinite(value)||value<0) return;
+  plCreditDays=Math.round(value*100)/100;
+  localStorage.setItem('att_pl_credit_days',plCreditDays);
+  updateStats();
+}
 
 function updateSalary(){
   const salary=monthlySalary||parseFloat(document.getElementById('salaryInput')?.value)||0;
@@ -434,7 +454,7 @@ function updateSalary(){
 
     const e=attendance[date];
     if(e?.paidLeave){
-      plCount++; plMins+=PAID_LEAVE_MINS;
+      plCount++; plMins+=getPaidLeaveMins();
       // If they also logged time on PL day, add that too
       if(e.checkIn&&e.checkOut){const m=tdm(e.checkIn,e.checkOut);if(m>0)workedMins+=m;}
     } else if(e&&(e.checkIn||e.checkOut)){
@@ -446,13 +466,13 @@ function updateSalary(){
   }
 
   // If PL was not used at all, credit unused PL as bonus earned mins
-  const unusedPlMins = plCount===0 ? PAID_LEAVE_MINS : 0;
+  const unusedPlMins = plCount===0 ? getPaidLeaveMins() : 0;
 
   // Earned:
   //   - Sundays & holidays: credited as 1 full day each = perDay each
   //   - Worked days: credited by exact minutes worked × perMin
-  //   - PL: credited as PL_MINS × perMin (11h 25m per PL day)
-  //   - Unused PL: credited as PAID_LEAVE_MINS × perMin if no PL taken
+  //   - PL: credited using the configured PL days value
+  //   - Unused PL: credited at the same configured value if no PL is taken
   //   - Absent: 0 earned for that day (deducted)
   const sundayEarned  = sundayCount   * perDay;
   const holEarned     = holCount      * perDay;
@@ -676,7 +696,7 @@ function calculatePayslipPay(salary, skipFuture=true){
     const e=attendance[date];
     if(e?.paidLeave){
       plCount++;
-      plMins+=PAID_LEAVE_MINS;
+      plMins+=getPaidLeaveMins();
       if(e.checkIn&&e.checkOut){
         const m=tdm(e.checkIn,e.checkOut);
         if(m>0) workedMins+=m;
@@ -690,7 +710,7 @@ function calculatePayslipPay(salary, skipFuture=true){
       absentDays++;
     }
   }
-  const unusedPlMins=plCount===0?PAID_LEAVE_MINS:0;
+  const unusedPlMins=plCount===0?getPaidLeaveMins():0;
   const earned=(sundayCount*perDay)+(holCount*perDay)+(workedMins*perMin)+(plMins*perMin)+(unusedPlMins*perMin);
   const creditedDays=(workedMins/minsPerDay)+sundayCount+holCount+(plMins/minsPerDay)+(unusedPlMins/minsPerDay);
   return {
